@@ -15,12 +15,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - run: corepack enable
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
+          cache: "pnpm"
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
       - run: npm run verify:golden
 
   test:
@@ -43,12 +45,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - run: corepack enable
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "pnpm"
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
       - run: npm run check:ci
       - run: npm run demo:killer:ci
       - run: npm run build
