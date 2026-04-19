@@ -141,3 +141,7 @@ See `docs/MCP.md` for the current scope and `docs/MCP_CLIENTS.md` for launch/aut
 - Repo norms live in `instructions.md`.
 - All examples and runtime behavior are **simulation-first** (deterministic, synthetic artifacts). Replace simulated connectors with real ones when you’re ready.
 - Hosted control-plane docs and deployment notes live in [OmnisGenomics/BioFlow-Cloud](https://github.com/OmnisGenomics/BioFlow-Cloud).
+
+## Contributing
+
+See `CONTRIBUTING.md` for the public-core contribution workflow and `docs/CLA.md` for the inbound license policy.

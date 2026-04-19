@@ -3,3 +3,6 @@ contact_links:
   - name: Request beta access (email)
     url: mailto:founders@bioflow.io?subject=BioFlow%20Beta%20Access%20Request
     about: Concierge onboarding (manual org + API key provisioning)
+  - name: Contributor agreement / relicensing questions
+    url: mailto:founders@bioflow.io?subject=BioFlow%20Contributor%20Agreement
+    about: Questions about CLA status or inbound licensing for public-core contributions

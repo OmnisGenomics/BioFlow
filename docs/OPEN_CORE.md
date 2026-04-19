@@ -31,10 +31,12 @@ The reason is simple: the local deterministic engine is useful on its own, but t
 
 - Keep the MCP layer thin and delegate to the same CLI/service paths the product already uses.
 - Treat local workflows and hosted workflows as separate boundaries, not separate products.
+- Keep external contributions aligned with `CONTRIBUTING.md` and `docs/CLA.md` so inbound licensing stays clean.
 - Keep the public README and MCP docs aligned with the same boundary.
 
 ## Immediate Next Steps
 
 1. Keep the public core buildable and testable from source.
-2. Publish client launch examples and auth setup for the MCP server.
-3. Keep hosted-only capabilities documented in BioFlow-Cloud.
+2. Keep the CLA workflow visible in the public repo and out of runtime code.
+3. Publish client launch examples and auth setup for the MCP server.
+4. Keep hosted-only capabilities documented in BioFlow-Cloud.
