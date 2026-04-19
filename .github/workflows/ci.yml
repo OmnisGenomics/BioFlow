@@ -56,6 +56,15 @@ jobs:
       - run: npm run check:ci
       - run: npm run demo:killer:ci
       - run: npm run build
+      - name: Detect hosted-only scripts
+        id: hosted-scripts
+        run: |
+          node - <<'NODE'
+          const scripts = require('./package.json').scripts ?? {};
+          const enabled = Boolean(scripts['db:migrate'] && scripts['service:api'] && scripts['test:rls']);
+          const fs = require('node:fs');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `enabled=${enabled}\n`);
+          NODE
       - name: CLI autopilot flow (mock hosted)
         env:
           BIOFLOW_AUTOPILOT_FLOW_OUT: .bioflow_smoke_service/cli-autopilot-run-flow-summary.json
@@ -70,6 +79,7 @@ jobs:
           path: .bioflow_smoke_service/cli-autopilot-run-flow-summary.json
           if-no-files-found: warn
       - name: Self-serve smoke (signup -> run -> verify -> share)
+        if: ${{ steps.hosted-scripts.outputs.enabled == 'true' }}
         env:
           BIOFLOW_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
           BIOFLOW_SERVICE_DATA_DIR: .bioflow_smoke_service
@@ -107,4 +117,6 @@ jobs:
           name: self-serve-autopilot-summary
           path: .bioflow_smoke_service/self-serve-autopilot.json
           if-no-files-found: warn
-      - run: BIOFLOW_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres npm run test:rls
+      - name: RLS integration
+        if: ${{ steps.hosted-scripts.outputs.enabled == 'true' }}
+        run: BIOFLOW_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres npm run test:rls
