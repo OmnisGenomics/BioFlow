@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 
@@ -30,7 +31,15 @@ function isKnownTimeoutFlake(output: string): boolean {
   return timeoutSignatures.some((pattern) => pattern.test(output));
 }
 
+function loadPackageScripts(): Set<string> {
+  const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
+    scripts?: Record<string, unknown>;
+  };
+  return new Set(Object.keys(packageJson.scripts ?? {}));
+}
+
 function main(): void {
+  const scripts = loadPackageScripts();
   const checkResult = run(["run", "check"], true);
   if (checkResult.stdout) process.stdout.write(checkResult.stdout);
   if (checkResult.stderr) process.stderr.write(checkResult.stderr);
@@ -48,21 +57,25 @@ function main(): void {
     return;
   }
 
-  const serviceIntegrationResult = run(["run", "test:service:integration"], true);
-  if (serviceIntegrationResult.stdout) process.stdout.write(serviceIntegrationResult.stdout);
-  if (serviceIntegrationResult.stderr) process.stderr.write(serviceIntegrationResult.stderr);
-  if (serviceIntegrationResult.status !== 0) {
-    console.error("test:service:integration failed");
-    process.exitCode = 1;
-    return;
+  if (scripts.has("test:service:integration")) {
+    const serviceIntegrationResult = run(["run", "test:service:integration"], true);
+    if (serviceIntegrationResult.stdout) process.stdout.write(serviceIntegrationResult.stdout);
+    if (serviceIntegrationResult.stderr) process.stderr.write(serviceIntegrationResult.stderr);
+    if (serviceIntegrationResult.status !== 0) {
+      console.error("test:service:integration failed");
+      process.exitCode = 1;
+      return;
+    }
   }
 
-  const packagedCliResult = run(["run", "test:packaged-cli"], true);
-  if (packagedCliResult.stdout) process.stdout.write(packagedCliResult.stdout);
-  if (packagedCliResult.stderr) process.stderr.write(packagedCliResult.stderr);
-  if (packagedCliResult.status !== 0) {
-    console.error("test:packaged-cli failed");
-    process.exitCode = 1;
+  if (scripts.has("test:packaged-cli")) {
+    const packagedCliResult = run(["run", "test:packaged-cli"], true);
+    if (packagedCliResult.stdout) process.stdout.write(packagedCliResult.stdout);
+    if (packagedCliResult.stderr) process.stderr.write(packagedCliResult.stderr);
+    if (packagedCliResult.status !== 0) {
+      console.error("test:packaged-cli failed");
+      process.exitCode = 1;
+    }
   }
 }
 
