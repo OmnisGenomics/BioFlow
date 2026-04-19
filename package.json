@@ -8,6 +8,17 @@
     "bioflow": "dist/cli/main.js",
     "bioflow-mcp": "dist/mcp/main.js"
   },
+  "exports": {
+    ".": "./dist/cli/main.js",
+    "./package.json": "./package.json",
+    "./cli/*.js": "./dist/cli/*.js",
+    "./clean/*.js": "./dist/clean/*.js",
+    "./core/*.js": "./dist/core/*.js",
+    "./gxp/*.js": "./dist/gxp/*.js",
+    "./mcp/*.js": "./dist/mcp/*.js",
+    "./schemas/*.js": "./dist/schemas/*.js",
+    "./sync/*.js": "./dist/sync/*.js"
+  },
   "files": [
     "dist",
     "README.md",
@@ -20,6 +31,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsc -p tsconfig.build.json && node scripts/copy-build-assets.mjs",
     "check": "npm run typecheck && npm run test:serial && npm run verify:golden",
     "check:ci": "tsx scripts/check-ci.ts",
