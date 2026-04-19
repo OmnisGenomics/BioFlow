@@ -31,12 +31,10 @@ The reason is simple: the local deterministic engine is useful on its own, but t
 
 - Keep the MCP layer thin and delegate to the same CLI/service paths the product already uses.
 - Treat local workflows and hosted workflows as separate boundaries, not separate products.
-- Keep README, pitch, pricing, and roadmap language aligned with the same boundary.
+- Keep the public README and MCP docs aligned with the same boundary.
 
 ## Immediate Next Steps
 
-1. Publish Apache 2.0 for the open core.
-2. Put a CLA or inbound relicensing agreement in place before accepting outside contributions if dual licensing remains on the table.
-3. Keep the open-core surface buildable and testable from source.
-4. Publish client launch examples and auth setup for the MCP server and hosted service.
-5. Keep hosted-only capabilities clearly documented as such.
+1. Keep the public core buildable and testable from source.
+2. Publish client launch examples and auth setup for the MCP server.
+3. Keep hosted-only capabilities documented in BioFlow-Cloud.

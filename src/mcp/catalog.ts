@@ -44,22 +44,16 @@ const TOP_DOC_PATHS = [
   "README.md",
   "package.json",
   "docs/ARCHITECTURE.md",
-  "docs/AUTOPILOT_GATE_RUNBOOK.md",
-  "docs/BIOFLOW_HOSTED_BETA_VALIDATION_BUNDLE.md",
-  "docs/DEPLOYMENT.md",
-  "docs/HOSTED_BETA_QUICKSTART.md",
+  "docs/KILLER_EXAMPLE.md",
   "docs/MCP.md",
-  "docs/ROADMAP.md",
+  "docs/MCP_CLIENTS.md",
+  "docs/OPEN_CORE.md",
   "docs/SECURITY.md",
-  "docs/SERVICE.md",
-  "docs/SELF_SERVICE_P0_PLAN.md",
   "docs/WORKFLOW_SPEC.md",
   "src/cli/main.ts",
   "src/core/engine.ts",
   "src/core/validate.ts",
   "src/core/verify.ts",
-  "src/service/api/server.ts",
-  "src/service/config.ts",
   "src/sync/remote.ts"
 ];
 
@@ -160,7 +154,7 @@ export function renderRepoSummary(index: RepositoryIndex, resources: ResourceDes
     `Workflow scripts: ${workflowSamples || "none detected"}`,
     `Suggested resources: ${resourceSamples || "none"}`,
     "",
-    "Start with `bioflow://resource/repo-summary`, `bioflow://wiki/index`, `bioflow://wiki/workflows`, `docs/ROADMAP.md`, and `README.md`."
+    "Start with `bioflow://resource/repo-summary`, `README.md`, `docs/OPEN_CORE.md`, `docs/MCP.md`, and `docs/KILLER_EXAMPLE.md`."
   ].join("\n");
 }
 
@@ -173,10 +167,10 @@ export function renderWorkflowInventory(index: RepositoryIndex): string {
   }
   lines.push("");
   lines.push("Primary operational docs:");
-  lines.push("- `bioflow://wiki/workflows`");
-  lines.push("- `docs/ROADMAP.md`");
-  lines.push("- `docs/SERVICE.md`");
-  lines.push("- `docs/HOSTED_BETA_QUICKSTART.md`");
+  lines.push("- `docs/OPEN_CORE.md`");
+  lines.push("- `docs/MCP.md`");
+  lines.push("- `docs/MCP_CLIENTS.md`");
+  lines.push("- `docs/KILLER_EXAMPLE.md`");
   return lines.join("\n");
 }
 

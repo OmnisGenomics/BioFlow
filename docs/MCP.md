@@ -65,7 +65,7 @@ Set `BIOFLOW_MCP_REPO_ROOT` if you need to point the server at a different check
 
 - `bioflow://resource/repo-summary`
 - `bioflow://resource/workflow-inventory`
-- `bioflow://wiki/*` for generated wiki pages
+- `bioflow://wiki/*` for generated wiki pages when a wiki exists in the checkout
 - `bioflow://resource/run/<runId>/manifest`
 - `bioflow://resource/run/<runId>/execution`
 - `bioflow://resource/run/<runId>/report`
@@ -79,7 +79,7 @@ This slice can now:
 
 - summarize the repository
 - search docs and source
-- read generated wiki pages and key source files
+- read generated wiki pages and key source files when present
 - inspect run manifests, execution records, and generated reports
 - validate a repository workflow
 - run a local workflow against repo-relative inputs
@@ -94,7 +94,7 @@ Tenant-scoped enforcement still lives at the remote service boundary.
 
 ## Remaining Steps To Make It Fully Viable
 
-1. Publish Apache 2.0 for the open core and keep the contribution policy aligned with the commercial boundary.
+1. Keep the client launch examples and the public/private repo boundary documentation in sync.
 
 Client launch examples and operator setup notes live in [docs/MCP_CLIENTS.md](docs/MCP_CLIENTS.md).
 
