@@ -14,6 +14,7 @@ BioFlow core is Apache 2.0. We accept pull requests, but external contributions 
 - First-time external contributors should contact `founders@bioflow.io` before merge.
 - Maintainers confirm CLA status and keep that record outside the codebase.
 - The required GitHub status check is `CLA`; external pull requests need the `cla-approved` label before it passes.
+- The `main` branch is protected on GitHub, so the `CLA` check must pass before merge.
 - The CLA is about inbound licensing and future relicensing flexibility. It does not change the Apache 2.0 license on this repository.
 
 ## Review Focus

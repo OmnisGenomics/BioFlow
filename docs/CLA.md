@@ -16,7 +16,7 @@ This document describes the workflow. It is not the legal agreement itself.
 - The repository runs `.github/workflows/cla.yml` on pull requests.
 - External pull requests pass only after a maintainer applies the `cla-approved` label.
 - Repository members, owners, and collaborators pass automatically.
-- Branch protection should require the `CLA` status check before merge.
+- Branch protection on `main` requires the `CLA` status check before merge.
 
 ## Policy
 
