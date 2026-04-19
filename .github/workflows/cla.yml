@@ -1,0 +1,46 @@
+name: CLA
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+      - edited
+
+jobs:
+  cla:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+
+    steps:
+      - name: Check contributor license status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const association = String(pr.author_association || "").toUpperCase();
+            const labels = (pr.labels ?? []).map((label) => String(label.name || "").toLowerCase());
+
+            if (pr.draft) {
+              core.notice("CLA check skipped for draft pull requests.");
+              return;
+            }
+
+            const approvedAssociations = new Set(["MEMBER", "OWNER", "COLLABORATOR"]);
+            const approvedLabel = labels.includes("cla-approved");
+
+            if (approvedAssociations.has(association) || approvedLabel) {
+              core.notice(`CLA check passed for ${pr.user.login} (${association || "UNKNOWN"})`);
+              return;
+            }
+
+            core.setFailed([
+              "CLA approval is required for external contributions to BioFlow's public core.",
+              "Ask a maintainer to apply the `cla-approved` label or complete the inbound license workflow in docs/CLA.md.",
+              "This check passes automatically for repository members, owners, and collaborators."
+            ].join(" "));

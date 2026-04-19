@@ -11,6 +11,13 @@ This document describes the workflow. It is not the legal agreement itself.
 3. If this is your first external contribution, contact `founders@bioflow.io` and the maintainers to complete the CLA step.
 4. Maintainers confirm CLA status before merging.
 
+## GitHub Enforcement
+
+- The repository runs `.github/workflows/cla.yml` on pull requests.
+- External pull requests pass only after a maintainer applies the `cla-approved` label.
+- Repository members, owners, and collaborators pass automatically.
+- Branch protection should require the `CLA` status check before merge.
+
 ## Policy
 
 - Apache 2.0 remains the repository license.
