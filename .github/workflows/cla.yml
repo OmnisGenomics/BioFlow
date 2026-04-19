@@ -12,7 +12,8 @@ on:
       - edited
 
 jobs:
-  cla:
+  CLA:
+    name: CLA
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read

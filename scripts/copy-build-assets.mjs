@@ -25,7 +25,7 @@ async function main() {
   }
 
   if (assets.length > 0) {
-    console.log(`Copied ${assets.length} JSON asset(s) into dist/`);
+    console.error(`Copied ${assets.length} JSON asset(s) into dist/`);
   }
 }
 
@@ -44,4 +44,3 @@ main().catch((err) => {
   console.error(err instanceof Error ? err.stack ?? err.message : String(err));
   process.exitCode = 1;
 });
-
