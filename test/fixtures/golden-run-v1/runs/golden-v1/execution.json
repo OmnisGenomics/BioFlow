@@ -1,0 +1,341 @@
+{
+  "execution": {
+    "workflowId": "golden.workflow",
+    "workflowVersion": "1.0.0",
+    "workflowDigest": "526fc43aa790a3d8cc6a4b0fa7e4ed5de9b5e1606ec304749bba0880022769e6",
+    "runId": "golden-v1",
+    "status": "completed",
+    "startedAt": "2026-02-06T17:03:20.189Z",
+    "endedAt": "2026-02-06T17:03:20.230Z",
+    "inputs": [
+      {
+        "name": "input.txt",
+        "uri": "sha256:2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+        "sha256": "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+        "bytes": 13,
+        "mediaType": "text/plain",
+        "kind": "input",
+        "createdAt": "2026-02-06T17:03:20.148Z"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "connector.eln_sim.ack.json",
+        "uri": "sha256:06ee970dae631ef409de12725ba79749362666e187f26a72d7c54f503ab762b3",
+        "sha256": "06ee970dae631ef409de12725ba79749362666e187f26a72d7c54f503ab762b3",
+        "bytes": 169,
+        "mediaType": "application/json",
+        "kind": "ack",
+        "createdAt": "2026-02-06T17:03:20.219Z"
+      }
+    ],
+    "auditLog": [
+      {
+        "at": "2026-02-06T17:03:20.183Z",
+        "actor": "golden",
+        "action": "execution_started",
+        "details": {
+          "runId": "golden-v1",
+          "workflowId": "golden.workflow",
+          "workflowVersion": "1.0.0"
+        },
+        "prevHash": null,
+        "hash": "b724dedf55e6177e3e73ddb4ffeac12b199cc0799790a548494df229ed981b33"
+      },
+      {
+        "at": "2026-02-06T17:03:20.183Z",
+        "actor": "system",
+        "action": "workflow_snapshot",
+        "details": {
+          "runId": "golden-v1",
+          "workflowDigest": "526fc43aa790a3d8cc6a4b0fa7e4ed5de9b5e1606ec304749bba0880022769e6",
+          "workflowArtifact": "sha256:526fc43aa790a3d8cc6a4b0fa7e4ed5de9b5e1606ec304749bba0880022769e6"
+        },
+        "prevHash": "b724dedf55e6177e3e73ddb4ffeac12b199cc0799790a548494df229ed981b33",
+        "hash": "0780e8184a43f87e567187be513e2a381eedc773be1086333c561acc5d653508"
+      },
+      {
+        "at": "2026-02-06T17:03:20.189Z",
+        "actor": "system",
+        "action": "inputs_snapshot",
+        "details": {
+          "runId": "golden-v1",
+          "inputs": [
+            {
+              "name": "input.txt",
+              "sha256": "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+              "bytes": 13
+            }
+          ]
+        },
+        "prevHash": "0780e8184a43f87e567187be513e2a381eedc773be1086333c561acc5d653508",
+        "hash": "3ec1ac8ea45225e2536f1f75b318146a2f1e943d6c6234a0c8b2184e441c59fa"
+      },
+      {
+        "at": "2026-02-06T17:03:20.190Z",
+        "actor": "system",
+        "action": "node_started",
+        "details": {
+          "runId": "golden-v1",
+          "nodeId": "start",
+          "kind": "trigger.manual"
+        },
+        "prevHash": "3ec1ac8ea45225e2536f1f75b318146a2f1e943d6c6234a0c8b2184e441c59fa",
+        "hash": "c41a05edf6f56182c483fc1a5056099802e74495f571d2f6ce50f49a171f2da4"
+      },
+      {
+        "at": "2026-02-06T17:03:20.190Z",
+        "actor": "system",
+        "action": "node_completed",
+        "details": {
+          "runId": "golden-v1",
+          "nodeId": "start",
+          "kind": "trigger.manual",
+          "inputDigests": [
+            "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff"
+          ],
+          "outputDigests": [
+            "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff"
+          ],
+          "costUSD": 0
+        },
+        "prevHash": "c41a05edf6f56182c483fc1a5056099802e74495f571d2f6ce50f49a171f2da4",
+        "hash": "ecd4017f1c742058fee79f5ee8a73c8991d9cde180bac8960b83ee2d81f96d60"
+      },
+      {
+        "at": "2026-02-06T17:03:20.191Z",
+        "actor": "system",
+        "action": "node_started",
+        "details": {
+          "runId": "golden-v1",
+          "nodeId": "score",
+          "kind": "transform.score"
+        },
+        "prevHash": "ecd4017f1c742058fee79f5ee8a73c8991d9cde180bac8960b83ee2d81f96d60",
+        "hash": "29c75efc581385fcfe279a41316a64b9f63f940a47c12c1081d02e5150f27dbf"
+      },
+      {
+        "at": "2026-02-06T17:03:20.199Z",
+        "actor": "system",
+        "action": "node_completed",
+        "details": {
+          "runId": "golden-v1",
+          "nodeId": "score",
+          "kind": "transform.score",
+          "inputDigests": [
+            "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff"
+          ],
+          "outputDigests": [
+            "02d0662f8acb654028b77c0cc1539a96df048029c4ae1c96b8133d89a5b615aa"
+          ],
+          "costUSD": 0.01
+        },
+        "prevHash": "29c75efc581385fcfe279a41316a64b9f63f940a47c12c1081d02e5150f27dbf",
+        "hash": "6261ceb59e35ac25455224f79aedf26fdf038130a1d55d81244d27203a4d3413"
+      },
+      {
+        "at": "2026-02-06T17:03:20.199Z",
+        "actor": "system",
+        "action": "node_started",
+        "details": {
+          "runId": "golden-v1",
+          "nodeId": "report",
+          "kind": "report.aggregate"
+        },
+        "prevHash": "6261ceb59e35ac25455224f79aedf26fdf038130a1d55d81244d27203a4d3413",
+        "hash": "ecd309bc505587c89dab7ac7466fa63ef295876b37a7eda58ac5683c4483bef4"
+      },
+      {
+        "at": "2026-02-06T17:03:20.210Z",
+        "actor": "system",
+        "action": "node_completed",
+        "details": {
+          "runId": "golden-v1",
+          "nodeId": "report",
+          "kind": "report.aggregate",
+          "inputDigests": [
+            "02d0662f8acb654028b77c0cc1539a96df048029c4ae1c96b8133d89a5b615aa"
+          ],
+          "outputDigests": [
+            "9608b53343d1d5e54226ec97b962043c120fe0011cb9af73f78fe45f24778201"
+          ],
+          "costUSD": 0.02
+        },
+        "prevHash": "ecd309bc505587c89dab7ac7466fa63ef295876b37a7eda58ac5683c4483bef4",
+        "hash": "983c3b9369aca046d27e7a4ee6907f628ace3fbb2e464277be0540b4f0b43042"
+      },
+      {
+        "at": "2026-02-06T17:03:20.210Z",
+        "actor": "system",
+        "action": "node_started",
+        "details": {
+          "runId": "golden-v1",
+          "nodeId": "writeback",
+          "kind": "action.connector"
+        },
+        "prevHash": "983c3b9369aca046d27e7a4ee6907f628ace3fbb2e464277be0540b4f0b43042",
+        "hash": "d2a2ed72c94f370575e3e27afc62e8f685db438d7a5ae91dc1945fa176090b92"
+      },
+      {
+        "at": "2026-02-06T17:03:20.230Z",
+        "actor": "system",
+        "action": "node_completed",
+        "details": {
+          "runId": "golden-v1",
+          "nodeId": "writeback",
+          "kind": "action.connector",
+          "inputDigests": [
+            "9608b53343d1d5e54226ec97b962043c120fe0011cb9af73f78fe45f24778201"
+          ],
+          "outputDigests": [
+            "06ee970dae631ef409de12725ba79749362666e187f26a72d7c54f503ab762b3"
+          ],
+          "costUSD": 0.005
+        },
+        "prevHash": "d2a2ed72c94f370575e3e27afc62e8f685db438d7a5ae91dc1945fa176090b92",
+        "hash": "43467285de8aad33b51a891609ddc807e2d61b377ced5264c9b910a7036f9f70"
+      },
+      {
+        "at": "2026-02-06T17:03:20.230Z",
+        "actor": "system",
+        "action": "execution_completed",
+        "details": {
+          "runId": "golden-v1",
+          "costUSD": 0.034999999999999996
+        },
+        "prevHash": "43467285de8aad33b51a891609ddc807e2d61b377ced5264c9b910a7036f9f70",
+        "hash": "aa8c219319b910314002c488a3c7443b708d486f0003a363ab9fa00145370cdc"
+      }
+    ],
+    "costUSD": 0.03,
+    "runtime": {
+      "nodeVersion": "v20.19.6",
+      "platform": "linux",
+      "arch": "x64"
+    }
+  },
+  "nodeRuns": [
+    {
+      "nodeId": "start",
+      "kind": "trigger.manual",
+      "status": "ok",
+      "startedAt": "2026-02-06T17:03:20.190Z",
+      "endedAt": "2026-02-06T17:03:20.191Z",
+      "inputs": [
+        {
+          "name": "input.txt",
+          "uri": "sha256:2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+          "sha256": "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+          "bytes": 13,
+          "mediaType": "text/plain",
+          "kind": "input",
+          "createdAt": "2026-02-06T17:03:20.148Z"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "input.txt",
+          "uri": "sha256:2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+          "sha256": "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+          "bytes": 13,
+          "mediaType": "text/plain",
+          "kind": "input",
+          "createdAt": "2026-02-06T17:03:20.148Z"
+        }
+      ],
+      "costUSD": 0,
+      "notes": "Pass-through trigger"
+    },
+    {
+      "nodeId": "score",
+      "kind": "transform.score",
+      "status": "ok",
+      "startedAt": "2026-02-06T17:03:20.191Z",
+      "endedAt": "2026-02-06T17:03:20.199Z",
+      "inputs": [
+        {
+          "name": "input.txt",
+          "uri": "sha256:2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+          "sha256": "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+          "bytes": 13,
+          "mediaType": "text/plain",
+          "kind": "input",
+          "createdAt": "2026-02-06T17:03:20.148Z"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "score.score.json",
+          "uri": "sha256:02d0662f8acb654028b77c0cc1539a96df048029c4ae1c96b8133d89a5b615aa",
+          "sha256": "02d0662f8acb654028b77c0cc1539a96df048029c4ae1c96b8133d89a5b615aa",
+          "bytes": 162,
+          "mediaType": "application/json",
+          "kind": "score",
+          "createdAt": "2026-02-06T17:03:20.194Z"
+        }
+      ],
+      "costUSD": 0.01
+    },
+    {
+      "nodeId": "report",
+      "kind": "report.aggregate",
+      "status": "ok",
+      "startedAt": "2026-02-06T17:03:20.199Z",
+      "endedAt": "2026-02-06T17:03:20.210Z",
+      "inputs": [
+        {
+          "name": "score.score.json",
+          "uri": "sha256:02d0662f8acb654028b77c0cc1539a96df048029c4ae1c96b8133d89a5b615aa",
+          "sha256": "02d0662f8acb654028b77c0cc1539a96df048029c4ae1c96b8133d89a5b615aa",
+          "bytes": 162,
+          "mediaType": "application/json",
+          "kind": "score",
+          "createdAt": "2026-02-06T17:03:20.194Z"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "report.report.json",
+          "uri": "sha256:9608b53343d1d5e54226ec97b962043c120fe0011cb9af73f78fe45f24778201",
+          "sha256": "9608b53343d1d5e54226ec97b962043c120fe0011cb9af73f78fe45f24778201",
+          "bytes": 162,
+          "mediaType": "application/json",
+          "kind": "report",
+          "createdAt": "2026-02-06T17:03:20.205Z"
+        }
+      ],
+      "costUSD": 0.02
+    },
+    {
+      "nodeId": "writeback",
+      "kind": "action.connector",
+      "status": "ok",
+      "startedAt": "2026-02-06T17:03:20.210Z",
+      "endedAt": "2026-02-06T17:03:20.230Z",
+      "inputs": [
+        {
+          "name": "report.report.json",
+          "uri": "sha256:9608b53343d1d5e54226ec97b962043c120fe0011cb9af73f78fe45f24778201",
+          "sha256": "9608b53343d1d5e54226ec97b962043c120fe0011cb9af73f78fe45f24778201",
+          "bytes": 162,
+          "mediaType": "application/json",
+          "kind": "report",
+          "createdAt": "2026-02-06T17:03:20.205Z"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "connector.eln_sim.ack.json",
+          "uri": "sha256:06ee970dae631ef409de12725ba79749362666e187f26a72d7c54f503ab762b3",
+          "sha256": "06ee970dae631ef409de12725ba79749362666e187f26a72d7c54f503ab762b3",
+          "bytes": 169,
+          "mediaType": "application/json",
+          "kind": "ack",
+          "createdAt": "2026-02-06T17:03:20.219Z"
+        }
+      ],
+      "costUSD": 0.005,
+      "notes": "Simulated connector invocation"
+    }
+  ]
+}

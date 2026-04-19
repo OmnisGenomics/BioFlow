@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="BioFlow is a local-first, deterministic workflow + data cleaning runtime for life-science software stacks: content-addressed artifacts, tamper-evident audit, and reproducible verification."
+    />
+    <title>BioFlow — deterministic, verifiable workflow runs</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b0f17;
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel-2: rgba(255, 255, 255, 0.08);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.72);
+        --faint: rgba(255, 255, 255, 0.56);
+        --border: rgba(255, 255, 255, 0.14);
+        --shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+        --brand: #7cddff;
+        --brand-2: #b6f3d6;
+        --warn: #ffd27c;
+        --radius: 14px;
+        --maxw: 1080px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+          "Segoe UI Emoji";
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f6f7fb;
+          --panel: rgba(0, 0, 0, 0.035);
+          --panel-2: rgba(0, 0, 0, 0.055);
+          --text: rgba(0, 0, 0, 0.88);
+          --muted: rgba(0, 0, 0, 0.66);
+          --faint: rgba(0, 0, 0, 0.52);
+          --border: rgba(0, 0, 0, 0.12);
+          --shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        background:
+          radial-gradient(1200px 600px at 20% -10%, rgba(124, 221, 255, 0.25), transparent 60%),
+          radial-gradient(900px 600px at 80% 0%, rgba(182, 243, 214, 0.22), transparent 55%),
+          radial-gradient(900px 700px at 60% 110%, rgba(124, 221, 255, 0.16), transparent 58%),
+          var(--bg);
+        color: var(--text);
+        line-height: 1.45;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .wrap {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 28px 20px 70px;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 0 26px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+
+      .logo {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        box-shadow: 0 10px 30px rgba(124, 221, 255, 0.28);
+      }
+
+      .navlinks {
+        display: flex;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 22px;
+        align-items: start;
+        padding: 22px 0 30px;
+      }
+
+      @media (max-width: 900px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      h1 {
+        font-size: clamp(34px, 4.4vw, 56px);
+        line-height: 1.05;
+        margin: 0 0 12px;
+        letter-spacing: -0.8px;
+      }
+
+      .subhead {
+        font-size: 16px;
+        color: var(--muted);
+        max-width: 56ch;
+      }
+
+      .pillrow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 14px 0 18px;
+      }
+
+      .pill {
+        font-size: 12px;
+        color: var(--muted);
+        border: 1px solid var(--border);
+        background: var(--panel);
+        padding: 7px 10px;
+        border-radius: 999px;
+      }
+
+      .cta {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .btn.primary {
+        background: linear-gradient(135deg, rgba(124, 221, 255, 0.22), rgba(182, 243, 214, 0.18));
+        border-color: rgba(124, 221, 255, 0.35);
+      }
+
+      .btn.warn {
+        background: linear-gradient(135deg, rgba(255, 210, 124, 0.18), rgba(255, 255, 255, 0.04));
+        border-color: rgba(255, 210, 124, 0.35);
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      .card .hd {
+        padding: 14px 14px 0;
+      }
+
+      .card .bd {
+        padding: 14px;
+      }
+
+      .kicker {
+        font-size: 13px;
+        color: var(--faint);
+        margin: 0 0 6px;
+      }
+
+      .code {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        white-space: pre;
+        overflow: auto;
+        padding: 12px;
+        background: var(--panel-2);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        margin: 10px 0 0;
+      }
+
+      .grid3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      @media (max-width: 900px) {
+        .grid3 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      h2 {
+        font-size: 22px;
+        margin: 34px 0 12px;
+        letter-spacing: -0.2px;
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        letter-spacing: -0.1px;
+      }
+
+      .bullets {
+        margin: 10px 0 0;
+        padding-left: 16px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .bullets li {
+        margin: 6px 0;
+      }
+
+      .pricing {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 14px;
+      }
+
+      @media (max-width: 900px) {
+        .pricing {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .price {
+        font-size: 30px;
+        font-weight: 800;
+        margin: 6px 0 0;
+        letter-spacing: -0.4px;
+      }
+
+      .price small {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .fineprint {
+        font-size: 12px;
+        color: var(--faint);
+        margin-top: 10px;
+      }
+
+      .footer {
+        margin-top: 40px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+        color: var(--faint);
+        font-size: 13px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 18px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .tag {
+        font-family: var(--mono);
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="nav">
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div>BioFlow</div>
+          <span class="tag">local-first</span>
+          <span class="tag">deterministic</span>
+          <span class="tag">verifiable</span>
+        </div>
+        <div class="navlinks">
+          <a href="#beta">Beta</a>
+          <a href="./PITCH.md">Pitch</a>
+          <a href="./SERVICE.md">Service</a>
+          <a href="./SECURITY.md">Security</a>
+          <a href="./PRICING.md">Pricing</a>
+        </div>
+      </div>
+
+      <div class="hero">
+        <div>
+          <h1>Stop emailing broken sample sheets.</h1>
+          <div class="subhead">
+            BioFlow is a workflow runtime for life-science software stacks that makes every run
+            <strong>content-addressed</strong>, <strong>tamper-evident</strong>, and <strong>replay-verifiable</strong>.
+            Start with one painkiller: deterministic cleanup of messy sample metadata.
+          </div>
+          <div class="pillrow" aria-label="Key product properties">
+            <div class="pill">CAS artifacts (`sha256:&lt;hash&gt;`)</div>
+            <div class="pill">append-only audit chain</div>
+            <div class="pill">deterministic replay (`bioflow verify`)</div>
+            <div class="pill">hybrid sync (push / pull)</div>
+            <div class="pill">Postgres RLS tenancy</div>
+          </div>
+          <div class="cta">
+            <a class="btn primary" href="./HOSTED_BETA_QUICKSTART.md">Start self-serve hosted beta</a>
+            <a class="btn" href="../README.md">Run locally (free)</a>
+            <a class="btn" href="./SERVICE.md">Self-host the service boundary</a>
+            <a class="btn" href="./AUTOPILOT_GATE_RUNBOOK.md">Autopilot CI gate runbook</a>
+            <a class="btn warn" href="./PRICING.md">Team Sync + Enterprise reports</a>
+          </div>
+          <div class="fineprint">
+            Software-only: deterministic transforms, synthetic fixtures, and verifiable artifacts. No lab
+            instructions.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd">
+            <div class="kicker">Weekend demo</div>
+            <h3>Clean → verify → share</h3>
+          </div>
+          <div class="bd">
+            <div class="code" role="textbox" aria-label="CLI demo commands" tabindex="0">npm install
+npm run bioflow -- tidy ./SampleSheet.csv --profile sample-sheet-v1 --out ./cleaned
+npm run bioflow -- verify &lt;runId&gt;
+
+# team sync (service running)
+export BIOFLOW_REMOTE_URL=http://localhost:8080
+export BIOFLOW_REMOTE_ORG_ID=00000000-0000-0000-0000-000000000000
+npm run bioflow -- push &lt;runId&gt;</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>How it works</h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="bd">
+            <h3>1) Normalize</h3>
+            <ul class="bullets">
+              <li>Run <code>bioflow tidy</code> with a deterministic profile.</li>
+              <li>Outputs are written to a local content-addressed store.</li>
+              <li>Produces a run manifest + execution record.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bd">
+            <h3>2) Verify</h3>
+            <ul class="bullets">
+              <li><code>bioflow verify</code> recomputes the audit chain.</li>
+              <li>Re-hashes artifacts and checks integrity.</li>
+              <li>Replays deterministically and compares digests.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bd">
+            <h3>3) Sync</h3>
+            <ul class="bullets">
+              <li>Push/pull runs across machines without trusting spreadsheets.</li>
+              <li>Service boundary uses Postgres RLS for tenancy isolation.</li>
+              <li>Team plan gates collaboration; Enterprise gates report render.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h2>Built-in guarantees</h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="bd">
+            <h3>Content-addressed artifacts</h3>
+            <ul class="bullets">
+              <li>All bytes are stored as <code>sha256:&lt;hash&gt;</code> objects.</li>
+              <li>Runs reference hashes, enabling dedupe and integrity checks.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bd">
+            <h3>Tamper-evident audit</h3>
+            <ul class="bullets">
+              <li>Append-only audit entries chained by SHA-256.</li>
+              <li>Any mutation is detected on read/verify.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bd">
+            <h3>Deterministic verification</h3>
+            <ul class="bullets">
+              <li>Seeded replay for repeatable outputs.</li>
+              <li>Optional Enterprise: deterministic Markdown validation report.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h2>Pricing</h2>
+      <div class="pricing">
+        <div class="card">
+          <div class="bd">
+            <h3>Free</h3>
+            <div class="price">$0 <small>/ month</small></div>
+            <ul class="bullets">
+              <li>Local-first tidy/verify (no network required)</li>
+              <li>Sample Sheet profile (<code>sample-sheet-v1</code>)</li>
+              <li>CAS + audit chain + deterministic replay</li>
+            </ul>
+            <div class="fineprint">Best for individual workflows and reproducible bundles.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bd">
+            <h3>Team</h3>
+            <div class="price">$49 <small>/ month</small></div>
+            <ul class="bullets">
+              <li>Team Sync: push/pull/share runs within an org</li>
+              <li>Org profile registry + run registry filters</li>
+              <li>API keys + Stripe billing gate</li>
+            </ul>
+            <div class="fineprint">Built for CRO collaboration and org-scoped provenance.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bd">
+            <h3>Enterprise</h3>
+            <div class="price">$499 <small>/ month</small></div>
+            <ul class="bullets">
+              <li>Deterministic validation reports (Markdown, content-addressed)</li>
+              <li>Stronger isolation patterns (RLS + tenant-scoped storage)</li>
+              <li>Priority support + onboarding for regulated environments</li>
+            </ul>
+            <div class="fineprint">Reports are diffable and reproducible; PDF is a v1.1 add-on.</div>
+          </div>
+        </div>
+      </div>
+
+      <h2 id="beta">Get early access</h2>
+      <div class="card">
+        <div class="bd">
+          <div class="kicker">Self-serve onboarding</div>
+          <h3>Hosted beta: org signup + API key in one command</h3>
+          <ul class="bullets">
+            <li>Public self-serve signup endpoint with idempotency + abuse controls.</li>
+            <li>CLI command stores org ID + API key config for immediate team sync usage.</li>
+            <li>Team plans can manage billing via Stripe checkout and portal routes.</li>
+          </ul>
+          <div class="cta">
+            <a class="btn primary" href="./HOSTED_BETA_QUICKSTART.md">Run hosted quickstart</a>
+            <a class="btn" href="./SERVICE.md">See service docs</a>
+          </div>
+          <div class="fineprint">Concierge onboarding remains available for regulated enterprise deployments.</div>
+        </div>
+      </div>
+
+      <h2>Next actions</h2>
+      <div class="grid3">
+        <div class="card">
+          <div class="bd">
+            <h3>Try local mode</h3>
+            <div class="code" role="textbox" aria-label="Local mode commands" tabindex="0">npm install
+npm run bioflow -- tidy ./SampleSheet.csv --profile sample-sheet-v1 --out ./cleaned
+npm run bioflow -- verify &lt;runId&gt;
+npm run bioflow -- report &lt;runId&gt; --format markdown --out ./reports</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bd">
+            <h3>Try Team Sync</h3>
+            <div class="code" role="textbox" aria-label="Team sync commands" tabindex="0">docker compose up -d
+npm run db:migrate
+npm run service:worker
+npm run service:api
+
+# then from another shell:
+export BIOFLOW_REMOTE_URL=http://localhost:8080
+export BIOFLOW_REMOTE_ORG_ID=00000000-0000-0000-0000-000000000000
+npm run bioflow -- push &lt;runId&gt;</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="bd">
+            <h3>Self-serve autopilot</h3>
+            <div class="code" role="textbox" aria-label="Self-serve signup command" tabindex="0">export BIOFLOW_REMOTE_URL=https://bioflow-beta.fly.dev
+npm run bioflow -- autopilot:run --remote-url "$BIOFLOW_REMOTE_URL" --name "Acme Deterministic" --slug acme-deterministic --enforce-policy --out ./autopilot-run.json
+npm run bioflow -- autopilot:gate ./autopilot-run.json --json</div>
+            <div class="fineprint">Runs signup -> sample-sheet flow -> verify -> share, persists auth for reuse by default, and emits a single machine-readable gate decision.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div>
+          <strong>BioFlow</strong> — deterministic workflow bundles for life-science software stacks.
+        </div>
+        <div>
+          <a href="./ARCHITECTURE.md">Architecture</a> · <a href="./WORKFLOW_SPEC.md">Workflow spec</a> ·
+          <a href="./ROADMAP.md">Roadmap</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

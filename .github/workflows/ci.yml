@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  determinism:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - run: npm ci
+      - run: npm run verify:golden
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+      - run: npm run check:ci
+      - run: npm run demo:killer:ci
+      - run: npm run build
+      - name: CLI autopilot flow (mock hosted)
+        env:
+          BIOFLOW_AUTOPILOT_FLOW_OUT: .bioflow_smoke_service/cli-autopilot-run-flow-summary.json
+        run: |
+          set -euo pipefail
+          npm run test -- test/cli-autopilot-run-flow.test.ts
+      - name: Upload CLI autopilot flow summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-autopilot-run-flow-summary
+          path: .bioflow_smoke_service/cli-autopilot-run-flow-summary.json
+          if-no-files-found: warn
+      - name: Self-serve smoke (signup -> run -> verify -> share)
+        env:
+          BIOFLOW_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+          BIOFLOW_SERVICE_DATA_DIR: .bioflow_smoke_service
+          BIOFLOW_RUNNER_MODE: inline
+          BIOFLOW_API_KEY_PEPPER: 0123456789abcdef0123456789abcdef
+          BIOFLOW_DEV_ALLOW_ORG_HEADER: "false"
+          BIOFLOW_HTTP_RATE_LIMIT_POINTS: "0"
+          BIOFLOW_SIGNUP_RATE_LIMIT_POINTS: "0"
+          BIOFLOW_REMOTE_URL: http://127.0.0.1:8080
+          BIOFLOW_AUTOPILOT_OUT: .bioflow_smoke_service/self-serve-autopilot.json
+        run: |
+          set -euo pipefail
+          npm run db:migrate
+          npm run service:api >/tmp/bioflow-api.log 2>&1 &
+          API_PID=$!
+          trap 'status=$?; kill "$API_PID" >/dev/null 2>&1 || true; wait "$API_PID" >/dev/null 2>&1 || true; if [ "$status" -ne 0 ]; then echo "=== /tmp/bioflow-api.log ==="; cat /tmp/bioflow-api.log || true; fi' EXIT
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8080/readyz >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/readyz >/dev/null
+          npm run bioflow -- autopilot:run \
+            --remote-url "$BIOFLOW_REMOTE_URL" \
+            --enforce-policy \
+            --out "$BIOFLOW_AUTOPILOT_OUT"
+          echo "=== self-serve autopilot summary ==="
+          cat "$BIOFLOW_AUTOPILOT_OUT"
+          npm run bioflow -- autopilot:gate --json
+      - name: Upload self-serve autopilot summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-serve-autopilot-summary
+          path: .bioflow_smoke_service/self-serve-autopilot.json
+          if-no-files-found: warn
+      - run: BIOFLOW_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres npm run test:rls

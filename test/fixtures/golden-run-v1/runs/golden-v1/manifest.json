@@ -1,0 +1,61 @@
+{
+  "manifestVersion": 1,
+  "runId": "golden-v1",
+  "createdAt": "2026-02-06T17:03:20.139Z",
+  "workflow": {
+    "id": "golden.workflow",
+    "version": "1.0.0",
+    "digest": "526fc43aa790a3d8cc6a4b0fa7e4ed5de9b5e1606ec304749bba0880022769e6",
+    "seed": "golden-seed-v1"
+  },
+  "artifacts": {
+    "input.txt": {
+      "name": "input.txt",
+      "uri": "sha256:2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+      "sha256": "2b33b698060a09287cf18eef75d13cec33705d0c1352fccffdacfc157d0f14ff",
+      "bytes": 13,
+      "mediaType": "text/plain",
+      "kind": "input",
+      "createdAt": "2026-02-06T17:03:20.148Z"
+    },
+    "__workflow.json": {
+      "name": "__workflow.json",
+      "uri": "sha256:526fc43aa790a3d8cc6a4b0fa7e4ed5de9b5e1606ec304749bba0880022769e6",
+      "sha256": "526fc43aa790a3d8cc6a4b0fa7e4ed5de9b5e1606ec304749bba0880022769e6",
+      "bytes": 439,
+      "mediaType": "application/json",
+      "kind": "workflow",
+      "createdAt": "2026-02-06T17:03:20.180Z"
+    },
+    "score.score.json": {
+      "name": "score.score.json",
+      "uri": "sha256:02d0662f8acb654028b77c0cc1539a96df048029c4ae1c96b8133d89a5b615aa",
+      "sha256": "02d0662f8acb654028b77c0cc1539a96df048029c4ae1c96b8133d89a5b615aa",
+      "bytes": 162,
+      "mediaType": "application/json",
+      "kind": "score",
+      "createdAt": "2026-02-06T17:03:20.194Z"
+    },
+    "report.report.json": {
+      "name": "report.report.json",
+      "uri": "sha256:9608b53343d1d5e54226ec97b962043c120fe0011cb9af73f78fe45f24778201",
+      "sha256": "9608b53343d1d5e54226ec97b962043c120fe0011cb9af73f78fe45f24778201",
+      "bytes": 162,
+      "mediaType": "application/json",
+      "kind": "report",
+      "createdAt": "2026-02-06T17:03:20.205Z"
+    },
+    "connector.eln_sim.ack.json": {
+      "name": "connector.eln_sim.ack.json",
+      "uri": "sha256:06ee970dae631ef409de12725ba79749362666e187f26a72d7c54f503ab762b3",
+      "sha256": "06ee970dae631ef409de12725ba79749362666e187f26a72d7c54f503ab762b3",
+      "bytes": 169,
+      "mediaType": "application/json",
+      "kind": "ack",
+      "createdAt": "2026-02-06T17:03:20.219Z"
+    }
+  },
+  "inputs": [
+    "input.txt"
+  ]
+}

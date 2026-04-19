@@ -1,0 +1,30 @@
+id: example.workflow
+version: 0.1.0
+compliance: Research
+seed: demo-seed
+nodes:
+  - id: start
+    kind: trigger.manual
+    name: Start
+  - id: score
+    kind: transform.score
+    name: Score inputs
+  - id: report
+    kind: report.aggregate
+    name: Aggregate report
+  - id: writeback
+    kind: action.connector
+    name: Simulated writeback
+    config:
+      connector: eln_sim
+      operation: writeback
+      params:
+        destination: demo
+edges:
+  - from: start
+    to: score
+  - from: score
+    to: report
+  - from: report
+    to: writeback
+

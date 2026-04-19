@@ -1,0 +1,37 @@
+id: killer.sample-sheet.workflow
+version: 1.0.0
+compliance: Research
+seed: killer-seed-v1
+nodes:
+  - id: start
+    kind: trigger.manual
+    name: Start
+  - id: clean
+    kind: action.connector
+    name: Normalize sample sheet
+    config:
+      connector: clean_csv
+      operation: sample-sheet-v1
+  - id: score
+    kind: transform.score
+    name: Score normalized artifacts
+  - id: aggregate
+    kind: report.aggregate
+    name: Aggregate run evidence
+  - id: writeback
+    kind: action.connector
+    name: Simulated ELN writeback
+    config:
+      connector: eln_sim
+      operation: writeback
+      params:
+        destination: deterministic-demo
+edges:
+  - from: start
+    to: clean
+  - from: clean
+    to: score
+  - from: score
+    to: aggregate
+  - from: aggregate
+    to: writeback

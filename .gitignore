@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.bioflow/
+.bioflow_*/
+.bioflow_demo/
+.bioflow_service/
+docker-compose.override.yml

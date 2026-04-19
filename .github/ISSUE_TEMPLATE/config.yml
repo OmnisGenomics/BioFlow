@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Request beta access (email)
+    url: mailto:founders@bioflow.io?subject=BioFlow%20Beta%20Access%20Request
+    about: Concierge onboarding (manual org + API key provisioning)

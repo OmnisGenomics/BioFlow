@@ -1,0 +1,26 @@
+{
+  "fixtureVersion": "1",
+  "runId": "golden-v1",
+  "contracts": {
+    "manifest": {
+      "id": "bioflow.run-manifest",
+      "semver": "1.0.0"
+    },
+    "executionRecord": {
+      "id": "bioflow.execution-record",
+      "semver": "1.0.0"
+    },
+    "gxpReport": {
+      "id": "bioflow.gxp-report",
+      "semver": "1.0.0"
+    }
+  },
+  "workflowDigest": "526fc43aa790a3d8cc6a4b0fa7e4ed5de9b5e1606ec304749bba0880022769e6",
+  "manifestDigest": "796fede4e985994bd6c96e1e34dd16244c4a11ee7b4b83c507a1989ac0d6bb2a",
+  "outputDigests": [
+    {
+      "name": "connector.eln_sim.ack.json",
+      "sha256": "06ee970dae631ef409de12725ba79749362666e187f26a72d7c54f503ab762b3"
+    }
+  ]
+}

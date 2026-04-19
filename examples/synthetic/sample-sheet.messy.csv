@@ -1,0 +1,9 @@
+[Header]
+IEMFileVersion,4
+Investigator Name,In Silico Team
+
+[Data]
+Sample_ID,Index,Lane,Project Name
+alpha-1,acgt,1,Proof Bundle
+alpha 1,acgt+tgca,"3,2,1",Proof Bundle
+beta#2,ttaa,4-2,Proof Bundle

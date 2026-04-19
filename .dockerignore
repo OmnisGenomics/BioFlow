@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.github
+.bioflow
+.bioflow_*
+.bioflow_demo
+.bioflow_service
+.env
+.env.*
+test
+docs
+examples
+README.md
+docker-compose*.yml
