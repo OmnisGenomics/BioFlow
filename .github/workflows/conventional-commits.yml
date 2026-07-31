@@ -1,21 +1,14 @@
 name: Conventional Commits
 
 on:
-  pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
-      - edited
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   conventional-commits:
     name: Conventional Commits
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS) }}
     timeout-minutes: 15
 
     steps:
@@ -34,9 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
-          elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+          if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
             range="HEAD~1..HEAD"
           else
             range="HEAD"
