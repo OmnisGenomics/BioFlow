@@ -10,11 +10,12 @@ on:
       - labeled
       - unlabeled
       - edited
+  workflow_dispatch:
 
 jobs:
   CLA:
     name: CLA
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS) }}
     permissions:
       pull-requests: read
 
@@ -24,6 +25,10 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
+            if (!pr) {
+              core.notice("CLA check is only meaningful for pull request payloads.");
+              return;
+            }
             const association = String(pr.author_association || "").toUpperCase();
             const labels = (pr.labels ?? []).map((label) => String(label.name || "").toLowerCase());
 
