@@ -5,48 +5,22 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   conventional-commits:
-    name: Conventional Commits
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS) }}
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Determine Revision Range
-        id: range
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-            range="HEAD~1..HEAD"
-          else
-            range="HEAD"
-          fi
-          echo "range=$range" >> "$GITHUB_OUTPUT"
-
-      - name: Validate Commit Subjects
-        run: |
-          set -euo pipefail
-          ./scripts/conventional-commit-check.sh \
-            --rev-range "${{ steps.range.outputs.range }}" \
-            --output out/conventional-commits-summary.json \
-            --allow-merge-commits \
-            --allow-git-revert
-
-      - name: Upload Conventional Commit Summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: conventional-commits-${{ github.run_id }}-${{ github.run_attempt }}
-          path: out/conventional-commits-summary.json
-          if-no-files-found: warn
+    uses: OmnisGenomics/.github/.github/workflows/maintenance.yml@main
+    with:
+      check_flake: false
+      report_artifact_name: conventional-commits-${{ github.run_id }}-${{ github.run_attempt }}
+      maintenance_command: |
+        git fetch --no-tags --depth=2 origin "${GITHUB_REF_NAME}"
+        if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+          rev_range=HEAD~1..HEAD
+        else
+          rev_range=HEAD
+        fi
+        nix run .#conventional-commits -- "$rev_range"
+    secrets:
+      MONARCHIC_GITHUB_PAT: ${{ secrets.MONARCHIC_GITHUB_PAT }}

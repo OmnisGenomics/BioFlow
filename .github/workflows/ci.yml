@@ -1,125 +1,22 @@
-name: CI
+name: Nix CI
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: nix-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  determinism:
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS) }}
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: ["20", "22"]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - run: corepack enable
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: "pnpm"
-
-      - run: pnpm install --frozen-lockfile
-      - run: npm run verify:golden
-
-  test:
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS) }}
-    env:
-      BIOFLOW_DATABASE_URL: postgres://postgres@127.0.0.1:55432/postgres
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - run: corepack enable
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-
-      - run: pnpm install --frozen-lockfile
-      - name: Start local Postgres
-        env:
-          PGDATA: ${{ runner.temp }}/bioflow-pgdata
-          PGSOCKET_DIR: ${{ runner.temp }}/bioflow-pgsocket
-          PGPORT: "55432"
-          PGLOG: ${{ runner.temp }}/bioflow-postgres.log
-        run: nix shell nixpkgs#postgresql_16 --command bash scripts/ci-local-postgres.sh start
-      - run: npm run check:ci
-      - run: npm run demo:killer:ci
-      - run: npm run build
-      - name: Detect hosted-only scripts
-        id: hosted-scripts
-        run: |
-          node - <<'NODE'
-          const scripts = require('./package.json').scripts ?? {};
-          const enabled = Boolean(scripts['db:migrate'] && scripts['service:api'] && scripts['test:rls']);
-          const fs = require('node:fs');
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `enabled=${enabled}\n`);
-          NODE
-      - name: CLI autopilot flow (mock hosted)
-        env:
-          BIOFLOW_AUTOPILOT_FLOW_OUT: .bioflow_smoke_service/cli-autopilot-run-flow-summary.json
-        run: |
-          set -euo pipefail
-          npm run test -- test/cli-autopilot-run-flow.test.ts
-      - name: Upload CLI autopilot flow summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cli-autopilot-run-flow-summary
-          path: .bioflow_smoke_service/cli-autopilot-run-flow-summary.json
-          if-no-files-found: warn
-      - name: Self-serve smoke (signup -> run -> verify -> share)
-        if: ${{ steps.hosted-scripts.outputs.enabled == 'true' }}
-        env:
-          BIOFLOW_SERVICE_DATA_DIR: .bioflow_smoke_service
-          BIOFLOW_RUNNER_MODE: inline
-          BIOFLOW_API_KEY_PEPPER: 0123456789abcdef0123456789abcdef
-          BIOFLOW_DEV_ALLOW_ORG_HEADER: "false"
-          BIOFLOW_HTTP_RATE_LIMIT_POINTS: "0"
-          BIOFLOW_SIGNUP_RATE_LIMIT_POINTS: "0"
-          BIOFLOW_REMOTE_URL: http://127.0.0.1:8080
-          BIOFLOW_AUTOPILOT_OUT: .bioflow_smoke_service/self-serve-autopilot.json
-        run: |
-          set -euo pipefail
-          npm run db:migrate
-          npm run service:api >/tmp/bioflow-api.log 2>&1 &
-          API_PID=$!
-          trap 'status=$?; kill "$API_PID" >/dev/null 2>&1 || true; wait "$API_PID" >/dev/null 2>&1 || true; if [ "$status" -ne 0 ]; then echo "=== /tmp/bioflow-api.log ==="; cat /tmp/bioflow-api.log || true; fi' EXIT
-          for _ in {1..60}; do
-            if curl -fsS http://127.0.0.1:8080/readyz >/dev/null; then
-              break
-            fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:8080/readyz >/dev/null
-          npm run bioflow -- autopilot:run \
-            --remote-url "$BIOFLOW_REMOTE_URL" \
-            --enforce-policy \
-            --out "$BIOFLOW_AUTOPILOT_OUT"
-          echo "=== self-serve autopilot summary ==="
-          cat "$BIOFLOW_AUTOPILOT_OUT"
-          npm run bioflow -- autopilot:gate --json
-      - name: Upload self-serve autopilot summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: self-serve-autopilot-summary
-          path: .bioflow_smoke_service/self-serve-autopilot.json
-          if-no-files-found: warn
-      - name: RLS integration
-        if: ${{ steps.hosted-scripts.outputs.enabled == 'true' }}
-        run: npm run test:rls
-      - name: Stop local Postgres
-        if: always()
-        env:
-          PGDATA: ${{ runner.temp }}/bioflow-pgdata
-          PGSOCKET_DIR: ${{ runner.temp }}/bioflow-pgsocket
-          PGPORT: "55432"
-          PGLOG: ${{ runner.temp }}/bioflow-postgres.log
-        run: nix shell nixpkgs#postgresql_16 --command bash scripts/ci-local-postgres.sh stop
+  nix-ci:
+    uses: OmnisGenomics/.github/.github/workflows/nix-ci.yml@main
+    with:
+      publish_cache: ${{ github.ref == 'refs/heads/main' }}
+    secrets:
+      MONARCHIC_GITHUB_PAT: ${{ secrets.MONARCHIC_GITHUB_PAT }}
