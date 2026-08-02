@@ -5,35 +5,19 @@ on:
     tags:
       - "cli-v*"
 
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
 jobs:
   publish:
-    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS) }}
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - run: corepack enable
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          registry-url: "https://registry.npmjs.org"
-          cache: "pnpm"
-
-      - name: Validate tag matches package version
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#cli-v}"
-          PKG_VERSION="$(node -e 'const fs=require(\"fs\");process.stdout.write(JSON.parse(fs.readFileSync(\"package.json\",\"utf8\")).version)')"
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "tag version ($TAG_VERSION) must match package.json version ($PKG_VERSION)"
-            exit 1
-          fi
-
-      - run: pnpm install --frozen-lockfile
-      - run: npm run build
-      - run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    uses: OmnisGenomics/.github/.github/workflows/npm-publish.yml@main
+    with:
+      tag_pattern: '^cli-v[0-9]+[.][0-9]+[.][0-9]+$'
+      tag_prefix: cli-v
+      install_command: pnpm install --frozen-lockfile
+      required_workflow: Nix CI
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      MONARCHIC_GITHUB_PAT: ${{ secrets.MONARCHIC_GITHUB_PAT }}
