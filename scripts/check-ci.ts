@@ -1,7 +1,6 @@
+import { npmCommand } from "./lib/process-command.js";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 
 interface RunResult {
   status: number;
@@ -16,14 +15,15 @@ const timeoutSignatures = [
 ];
 
 function run(args: string[], captureOutput = false): RunResult {
-  const result = spawnSync(npmCmd, args, {
+  const result = spawnSync(...npmCommand(args), {
     stdio: captureOutput ? "pipe" : "inherit",
     encoding: "utf8"
   });
   return {
     status: typeof result.status === "number" ? result.status : 1,
     stdout: typeof result.stdout === "string" ? result.stdout : "",
-    stderr: typeof result.stderr === "string" ? result.stderr : ""
+    stderr: [typeof result.stderr === "string" ? result.stderr : "", result.error?.message]
+      .filter(Boolean).join("\n")
   };
 }
 

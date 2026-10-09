@@ -1,14 +1,13 @@
+import { bioflowCommand } from "../scripts/lib/process-command.js";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-
 describe("cli autopilot:run", () => {
   it("prints help and exits with code 2 for --help", () => {
-    const result = spawnSync(npmCmd, ["run", "-s", "bioflow", "--", "autopilot:run", "--help"], {
+    const result = spawnSync(...bioflowCommand(["autopilot:run", "--help"]), {
       cwd: path.resolve("."),
       env: process.env,
       encoding: "utf8"
@@ -20,9 +19,7 @@ describe("cli autopilot:run", () => {
   }, 20_000);
 
   it("prints help and exits with code 2 for invalid key mode", () => {
-    const result = spawnSync(
-      npmCmd,
-      ["run", "-s", "bioflow", "--", "autopilot:run", "--key-mode", "invalid"],
+    const result = spawnSync(...bioflowCommand(["autopilot:run", "--key-mode", "invalid"]),
       {
         cwd: path.resolve("."),
         env: process.env,
@@ -35,7 +32,7 @@ describe("cli autopilot:run", () => {
   }, 20_000);
 
   it("prints help and exits with code 2 when --out value is missing", () => {
-    const result = spawnSync(npmCmd, ["run", "-s", "bioflow", "--", "autopilot:run", "--out"], {
+    const result = spawnSync(...bioflowCommand(["autopilot:run", "--out"]), {
       cwd: path.resolve("."),
       env: process.env,
       encoding: "utf8"
@@ -46,13 +43,7 @@ describe("cli autopilot:run", () => {
   }, 20_000);
 
   it("accepts --no-persist-auth and reaches runtime execution", () => {
-    const result = spawnSync(
-      npmCmd,
-      [
-        "run",
-        "-s",
-        "bioflow",
-        "--",
+    const result = spawnSync(...bioflowCommand([
         "autopilot:run",
         "--remote-url",
         "http://127.0.0.1:1",
@@ -62,7 +53,7 @@ describe("cli autopilot:run", () => {
         "no-persist-auth",
         "--no-persist-auth",
         "--json"
-      ],
+      ]),
       {
         cwd: path.resolve("."),
         env: process.env,
@@ -79,7 +70,7 @@ describe("cli autopilot:run", () => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "bioflow-cli-autopilot-run-env-"));
     const outPath = path.join(tempDir, "autopilot-run.json");
     try {
-      const result = spawnSync(npmCmd, ["run", "-s", "bioflow", "--", "autopilot:run", "--json"], {
+      const result = spawnSync(...bioflowCommand(["autopilot:run", "--json"]), {
         cwd: path.resolve("."),
         env: {
           ...process.env,
