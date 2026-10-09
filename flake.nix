@@ -100,6 +100,9 @@
                 runHook preInstall
                 export HOME="$(mktemp -d)"
                 export TMPDIR="$(mktemp -d)"
+                export GOMAXPROCS="$NIX_BUILD_CORES"
+                substituteInPlace package.json \
+                  --replace-fail 'vitest run' "vitest run --maxWorkers=$NIX_BUILD_CORES --minWorkers=1"
                 ${command}
                 mkdir -p "$out"
                 touch "$out/${name}"
