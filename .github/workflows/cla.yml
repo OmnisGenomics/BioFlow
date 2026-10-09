@@ -19,4 +19,35 @@ permissions:
 jobs:
   CLA:
     name: CLA
-    uses: OmnisGenomics/.github/.github/workflows/cla.yml@main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check contributor license status
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.notice("CLA check is only meaningful for pull request payloads.");
+              return;
+            }
+            const association = String(pr.author_association || "").toUpperCase();
+            const labels = (pr.labels ?? []).map((label) => String(label.name || "").toLowerCase());
+
+            if (pr.draft) {
+              core.notice("CLA check skipped for draft pull requests.");
+              return;
+            }
+
+            const approvedAssociations = new Set(["MEMBER", "OWNER", "COLLABORATOR"]);
+            const approvedLabel = labels.includes("cla-approved");
+
+            if (approvedAssociations.has(association) || approvedLabel) {
+              core.notice(`CLA check passed for ${pr.user.login} (${association || "UNKNOWN"})`);
+              return;
+            }
+
+            core.setFailed([
+              "CLA approval is required for external contributions to the public core.",
+              "Ask a maintainer to apply the `cla-approved` label or complete the inbound license workflow.",
+              "This check passes automatically for repository members, owners, and collaborators."
+            ].join(" "));
