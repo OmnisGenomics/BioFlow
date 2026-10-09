@@ -25,9 +25,11 @@ This repo is a **contract + runtime scaffold** for a workflow OS:
 
 `bioflow verify <runId>` checks:
 
-- Audit chain integrity
+- Nonempty audit chain integrity and expected execution/snapshot/node events, checked against the execution record and stored workflow (also when replay is disabled)
 - CAS object integrity (re-hash on read)
 - Deterministic replay output digests match recorded outputs
+
+Completed runs require evidence for every workflow node and a final `execution_completed` event. Failed runs require a final `node_failed` event; the current runner does not emit `execution_completed` for failures. These local consistency checks detect missing or inconsistent evidence but do not authenticate provenance: someone able to rewrite all evidence can recompute an unkeyed hash chain.
 
 ## Connector boundary (future)
 
