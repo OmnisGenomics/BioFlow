@@ -140,9 +140,11 @@
             test "$status" -eq 1
             test ! -e rejected
             # Launch the actual installed MCP wrapper without the source checkout.
-            printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"nix-smoke","version":"1"}}}' \
-              | bioflow-mcp > mcp-response.json
-            node -e 'const fs = require("fs"); const messages = fs.readFileSync("mcp-response.json", "utf8").trim().split("\n").map(JSON.parse); if (!messages.some(m => m.id === 1 && m.result && m.result.protocolVersion === "2025-11-25")) process.exit(1);'
+            export BIOFLOW_MCP_REPO_ROOT="$TMPDIR/mcp-workspace"
+            mkdir -p "$BIOFLOW_MCP_REPO_ROOT/docs/wiki"
+            cp ${self.packages.${system}.bioflow}/lib/bioflow/package.json "$BIOFLOW_MCP_REPO_ROOT/"
+            printf '# Smoke workspace\n' > "$BIOFLOW_MCP_REPO_ROOT/docs/wiki/index.md"
+            node -e 'const fs = require("fs"); const {spawnSync} = require("child_process"); const body = JSON.stringify({jsonrpc:"2.0",id:1,method:"initialize",params:{protocolVersion:"2025-11-25",capabilities:{},clientInfo:{name:"nix-smoke",version:"1"}}}); const input = "Content-Length: " + Buffer.byteLength(body) + "\r\n\r\n" + body; const child = spawnSync("bioflow-mcp", [], {input, encoding:"utf8", timeout:10000}); if (child.status !== 0) throw new Error(child.stderr || "MCP process failed"); fs.writeFileSync("mcp-response.json", child.stdout); const response = JSON.parse(child.stdout.slice(child.stdout.indexOf("\r\n\r\n") + 4)); if (response.id !== 1 || response.result?.protocolVersion !== "2025-11-25") throw new Error("MCP initialize failed");'
             mkdir -p "$out"
             cp mcp-response.json "$out/"
             touch "$out/installed-cli"
