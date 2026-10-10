@@ -1,6 +1,6 @@
 # BioFlow MCP
 
-BioFlow now ships an MCP server for repo intelligence and a thin local workflow action slice.
+The MCP server lets clients search the repository, inspect run records, and call local workflow and remote service commands.
 
 ## Start
 
@@ -75,7 +75,7 @@ Set `BIOFLOW_MCP_REPO_ROOT` if you need to point the server at a different check
 
 ## Current Scope
 
-This slice can now:
+The server can:
 
 - summarize the repository
 - search docs and source
@@ -90,13 +90,9 @@ This slice can now:
 - inspect remote durable sync bundles through `bioflow://resource/remote/run/<runId>/sync` when the session is bound to a remote org
 - bind the MCP session to org/auth defaults once through `initialize` or process env, and inspect the chained session audit resource
 
-Tenant-scoped enforcement still lives at the remote service boundary.
+The remote service enforces tenant access controls.
 
-## Remaining Steps To Make It Fully Viable
-
-1. Keep the client launch examples and the public/private repo boundary documentation in sync.
-
-Client launch examples and operator setup notes live in [docs/MCP_CLIENTS.md](docs/MCP_CLIENTS.md).
+Client launch examples and configuration notes are in [MCP_CLIENTS.md](MCP_CLIENTS.md).
 
 ## Practical Rule
 

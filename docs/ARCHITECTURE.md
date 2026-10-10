@@ -1,10 +1,10 @@
-# Architecture (simulation-first)
+# Architecture
 
-This repo is a **contract + runtime scaffold** for a workflow OS:
+BioFlow executes local workflows and stores their inputs, outputs, and execution records.
 
-- **Connector mesh**: adapters that translate external events/API calls into normalized `Artifact` + `Event` bundles.
-- **Workflow engine**: durable state transitions over a DAG of typed nodes with deterministic replay.
-- **Execution runtime**: containerized tasks (later) that emit artifacts and append-only audit entries.
+- Connectors implement operations such as sample-sheet cleanup and simulated service responses.
+- The workflow runner executes a directed acyclic graph of typed nodes.
+- Artifact storage saves file contents by hash. Manifests and audit entries record what happened during each run.
 
 ## Repo layers
 
@@ -14,7 +14,7 @@ This repo is a **contract + runtime scaffold** for a workflow OS:
 - `.bioflow/objects/*`: content-addressed objects (dedupe + integrity).
 - `.bioflow/runs/*`: run manifests + execution records.
 
-## Determinism & provenance
+## Reproducible outputs and execution records
 
 - Each run computes `workflowDigest = sha256(stableStringify(workflow))`.
 - Every audit entry is chained: `hash = sha256({at, actor, action, details, prevHash})`.
@@ -31,11 +31,11 @@ This repo is a **contract + runtime scaffold** for a workflow OS:
 
 Completed runs require evidence for every workflow node and a final `execution_completed` event. Failed runs require a final `node_failed` event; the current runner does not emit `execution_completed` for failures. These local consistency checks detect missing or inconsistent evidence but do not authenticate provenance: someone able to rewrite all evidence can recompute an unkeyed hash chain.
 
-## Connector boundary (future)
+## Connector interface
 
-Treat connectors as pure-ish functions:
+Connectors receive an operation's inputs and return artifacts and status:
 
 - Input: normalized event payload + prior artifacts + connection config.
 - Output: new artifacts + audit entries + structured status.
 
-This makes it easy to swap local simulated connectors for real implementations without changing workflow contracts.
+The current examples use simulated service connectors. Real integrations need their own implementation and validation.

@@ -1,23 +1,23 @@
-# BioFlow (deterministic MVP scaffold)
+# BioFlow
 
-BioFlow is an Apache 2.0 open-core workflow OS for life-science software stacks: connectors + deterministic orchestration + reproducible provenance.
+BioFlow is a command-line tool for cleaning sample sheets, running local workflows, and checking their outputs. It saves original inputs, output files, and execution records so runs can be inspected and verified offline.
 
-This repo currently contains a **local runner** that simulates workflows end-to-end (schemas, hashing, audit chain, artifacts) so you can iterate on contracts and UX before wiring real external services.
+The code is licensed under Apache 2.0. Sample workflows use synthetic inputs and simulated service connectors. The local sample-sheet cleanup command works without a hosted service.
 
-Positioning, boundary, and Apache 2.0 core license intent: see [docs/OPEN_CORE.md](docs/OPEN_CORE.md).
+See [license and repository scope](docs/OPEN_CORE.md) for the distinction between these local tools and the hosted service.
 
 ## Quickstart
 
 ```bash
-npm install
-npm run check
+corepack pnpm install --frozen-lockfile --ignore-scripts
+npm run build
 npm run check:ci
 ```
 
-Run the CI-enforced smoke and docs command checks locally:
+Run the workflow demo and check the documented commands:
 
 ```bash
-npm run demo:killer:ci
+npm run demo:workflow:ci
 npm run test -- test/docs-commands.test.ts
 ```
 
@@ -40,13 +40,13 @@ Or use the committed example:
 npm run bioflow -- run ./examples/example.workflow.yaml --input ./README.md
 ```
 
-Verify a run (audit chain + CAS integrity + deterministic replay):
+Verify a run's audit entries, stored file hashes, and replayed outputs:
 
 ```bash
 npm run bioflow -- verify <runId>
 ```
 
-Generate a deterministic GxP-style validation report (Markdown, content-addressed via CAS):
+Generate a Markdown report summarizing the software checks:
 
 ```bash
 npm run bioflow -- report <runId> --format markdown --out ./reports
@@ -54,17 +54,17 @@ npm run bioflow -- report <runId> --format markdown --out ./reports
 
 Note: new runs use UUID run IDs for compatibility with remote sync.
 
-## Killer example (deterministic evidence path)
+## Sample-sheet workflow example
 
-Run one command to execute the canonical deterministic path (normalize sample sheet -> score -> aggregate -> simulated ELN writeback), then verify and emit a deterministic Markdown report:
+This example cleans a synthetic sample sheet, runs simulated scoring and electronic lab notebook writeback steps, verifies the stored files, and generates a report:
 
 ```bash
-npm run demo:killer
+npm run demo:workflow
 ```
 
-Reference method and artifact contract: `docs/KILLER_EXAMPLE.md`.
+See [workflow steps and expected files](docs/SAMPLE_SHEET_EXAMPLE.md). The scoring and writeback steps are software demonstrations; they do not perform scientific analysis or write to a real service.
 
-Manual path using committed assets:
+Run the example steps separately:
 
 ```bash
 npm run bioflow -- validate ./examples/killer.workflow.yaml
@@ -73,12 +73,12 @@ npm run bioflow -- verify <runId>
 npm run bioflow -- report <runId> --format markdown --out ./reports
 ```
 
-## Clean CSV (Profile 1: Sample Sheet)
+## Clean a sample sheet
 
-Normalize messy sample metadata into a deterministic, verifiable bundle:
+Normalize sample IDs, indexes, and lane values while retaining other metadata:
 
 ```bash
-npm run bioflow -- tidy ./SampleSheet.csv --profile sample-sheet-v1 --out ./cleaned
+npm run bioflow -- tidy ./SampleSheet.csv --profile sample-sheet-v1 --out ./cleaned/run-001
 # then verify locally
 npm run bioflow -- verify <runId>
 ```
@@ -91,7 +91,7 @@ For local deployment, supported inputs, limits, backup/restore, and failure hand
 
 Sample IDs are normalized and allocated deterministically in row order. Final IDs are unique, including when a generated suffix collides with another row's ID. Duplicates use `_001`, `_002`, etc., shortening the base to respect the profile's `maxLen` (32 by default). If the suffix and at least one base character cannot fit, cleaning fails explicitly instead of exceeding the limit.
 
-Artifacts and execution records are written under `.bioflow/`:
+Files and execution records are stored under `.bioflow/`:
 
 - `.bioflow/objects/<shard>/<hash>`: content-addressed bytes (SHA-256)
 - `.bioflow/runs/<runId>/manifest.json`: logical names → `sha256:<hash>`
@@ -136,7 +136,7 @@ npm run bioflow -- mcp
 bioflow-mcp
 ```
 
-It exposes repository summary, repo search, docs/source resources, run manifest/execution/report resources, remote durable sync bundles when the session is bound to a remote org, the chained MCP session audit resource, remote run/profile sync tools, and local workflow validate/run/verify/report tools.
+The MCP server provides repository search, access to stored run records, and tools for validating, running, verifying, and reporting on workflows. It also exposes remote run and profile commands when configured with a compatible service.
 Set `BIOFLOW_MCP_REPO_ROOT` if you want to point it at a different checkout.
 Remote tools use the same `BIOFLOW_REMOTE_*` defaults and saved CLI config as the main CLI, and each call can override `remoteUrl`, `token`, and `orgId`.
 You can also bind the whole stdio session once by sending `bioflow.remoteUrl`, `bioflow.token`, and `bioflow.orgId` in the MCP `initialize` request.
@@ -145,8 +145,9 @@ See `docs/MCP.md` for the current scope and `docs/MCP_CLIENTS.md` for launch/aut
 ## Notes
 
 - Repo norms live in `instructions.md`.
-- All examples and runtime behavior are **simulation-first** (deterministic, synthetic artifacts). Replace simulated connectors with real ones when you’re ready.
-- Hosted control-plane docs and deployment notes live in [OmnisGenomics/BioFlow-Cloud](https://github.com/OmnisGenomics/BioFlow-Cloud).
+- Workflow examples use synthetic inputs and simulated service connectors. Sample-sheet cleanup is a local file operation.
+- Verification checks consistency, not who created the evidence. Generated reports do not establish regulatory qualification.
+- Hosted service documentation is in [OmnisGenomics/BioFlow-Cloud](https://github.com/OmnisGenomics/BioFlow-Cloud).
 
 ## Contributing
 

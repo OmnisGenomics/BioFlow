@@ -42,4 +42,4 @@ jobs:
       - name: Check core and packaged CLI
         run: npm run check:ci
       - name: Check deterministic demo
-        run: npm run demo:killer:ci
+        run: npm run demo:workflow:ci

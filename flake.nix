@@ -192,7 +192,7 @@
           };
           demo-killer = mkCheck {
             name = "demo-killer";
-            command = "npm run demo:killer:ci";
+            command = "npm run demo:workflow:ci";
           };
           cli-autopilot-flow = mkCheck {
             name = "cli-autopilot-flow";

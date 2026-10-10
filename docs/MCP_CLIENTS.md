@@ -101,4 +101,4 @@ Any MCP client that launches a stdio subprocess can use the same shape:
 - Local run artifacts default to `.bioflow/` under the repository root.
 - `bioflow://resource/mcp/session` shows the bound principal and audit chain.
 - `bioflow://resource/remote/run/<runId>/sync` is available when the session is bound to a remote org.
-- If you only want local repo intelligence, leave the remote auth env unset.
+- For local repository search and workflow tools, leave the remote authentication variables unset.
