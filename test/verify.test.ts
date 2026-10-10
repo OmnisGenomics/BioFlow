@@ -22,6 +22,28 @@ function rechain(record: ExecutionRecord): void {
 }
 
 describe("verifyRun", () => {
+  it.each([true, false])("rejects omitted independent nodes before a failure with replay=%s", async (replay) => {
+    const baseDir = path.resolve(`.bioflow_verify_failed_prefix_${replay}`);
+    await rm(baseDir, { recursive: true, force: true });
+    const workflow: Workflow = { ...auditWorkflow,
+      nodes: [{ id: "start", kind: "trigger.manual" },
+        { id: "fail", kind: "action.connector", config: { connector: "missing" } },
+        { id: "later", kind: "trigger.manual" }], edges: [] };
+    const result = await runWorkflow({ workflow, store: new LocalArtifactStore(baseDir),
+      inputs: [], runId: "failed-prefix" });
+    expect(result.execution.status).toBe("failed");
+    expect(result.nodeRuns.map((node) => node.nodeId)).toEqual(["start", "fail"]);
+    expect((await verifyRun({ baseDir, runId: "failed-prefix", replay })).valid).toBe(true);
+    const record = JSON.parse(await readFile(result.executionPath!, "utf8")) as ExecutionRecord;
+    record.nodeRuns.shift();
+    record.execution.auditLog = record.execution.auditLog.filter((entry) => entry.details.nodeId !== "start");
+    rechain(record);
+    await writeFile(result.executionPath!, JSON.stringify(record));
+    const verified = await verifyRun({ baseDir, runId: "failed-prefix", replay });
+    expect(verified.valid).toBe(false);
+    expect(verified.errors.join("\n")).toMatch(/deterministic execution prefix/);
+  });
+
   it("rejects a replay failure even when both runs have no outputs", async () => {
     const baseDir = path.resolve(".bioflow_verify_replay_status");
     await rm(baseDir, { recursive: true, force: true });

@@ -244,7 +244,7 @@ async function writeExecution(
   return outPath;
 }
 
-function topologicalOrder(workflow: Workflow): string[] {
+export function topologicalOrder(workflow: Workflow): string[] {
   const nodeIds = new Set(workflow.nodes.map((n) => n.id));
   const indegree = new Map<string, number>();
   for (const id of nodeIds) indegree.set(id, 0);
