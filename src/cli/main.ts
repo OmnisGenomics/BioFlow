@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile, stat, lstat, open, unlink } from "node:fs/promises";
 import { LocalArtifactStore } from "../core/artifact-store.js";
 import { runWorkflow } from "../core/engine.js";
 import { createRunId } from "../core/run-id.js";
@@ -12,6 +12,7 @@ import { LocalCAS } from "../core/cas.js";
 import { sha256Json } from "../core/hash.js";
 import { stableStringify } from "../core/stable-json.js";
 import { sampleSheetV1Profile } from "../clean/profiles/sample-sheet-v1.js";
+import { MAX_SAMPLE_SHEET_BYTES } from "../clean/sample-sheet.js";
 import { loadCliConfig, resolveRemoteDefaults, saveCliConfig } from "./config.js";
 import { runBioFlowMcp } from "../mcp/main.js";
 import type { Workflow } from "../core/types.js";
@@ -135,7 +136,7 @@ type Command =
   | { kind: "init"; outPath: string }
   | { kind: "validate"; workflowPath: string }
   | { kind: "run"; workflowPath: string; inputs: string[] }
-  | { kind: "verify"; runId: string }
+  | { kind: "verify"; runId: string; baseDir: string }
   | {
       kind: "report";
       runId: string;
@@ -329,8 +330,9 @@ async function main(): Promise<void> {
       return;
     }
     case "verify": {
+      validateLocalRunId(cmd.runId);
       const { verifyRun } = await import("../core/verify.js");
-      const result = await verifyRun({ baseDir: path.resolve(".bioflow"), runId: cmd.runId });
+      const result = await verifyRun({ baseDir: cmd.baseDir, runId: cmd.runId });
       if (!result.valid) {
         console.error(`FAIL: ${cmd.runId}`);
         for (const line of result.errors) console.error(`- ${line}`);
@@ -358,13 +360,20 @@ async function main(): Promise<void> {
       const baseDir = cmd.baseDir;
       const store = new LocalArtifactStore(baseDir);
       const runId = cmd.runId ?? createRunId();
-      const input = await store.importFile(runId, path.resolve(cmd.inputPath));
-
       const profile =
         cmd.profileName === "sample-sheet-v1"
           ? sampleSheetV1Profile
           : await fetchOrgSampleSheetProfile(cmd.profileName, cmd.remote);
 
+      const inputPath = path.resolve(cmd.inputPath);
+      const info = await stat(inputPath);
+      if (!info.isFile()) throw new Error("Sample sheet input must be a regular file");
+      if (info.size > MAX_SAMPLE_SHEET_BYTES) throw new Error("Sample sheet exceeds the 10 MiB input limit");
+      if (["__workflow.json", "gxp-report.md", "tidy.sample-sheet-v1.clean.csv", "tidy.sample-sheet-v1.data.csv", "tidy.sample-sheet-v1.idmap.json", "tidy.sample-sheet-v1.report.json"].includes(path.basename(inputPath))) {
+        throw new Error("Input filename is reserved for run evidence; rename the input file before cleanup");
+      }
+      await claimTidyRun(baseDir, runId);
+      const input = await store.importFile(runId, inputPath);
       const workflow = makeTidyWorkflow({ profile });
       const { execution, executionPath } = await runWorkflow({
         workflow,
@@ -385,6 +394,11 @@ async function main(): Promise<void> {
         process.exitCode = 1;
         return;
       }
+
+      const { verifyRun } = await import("../core/verify.js");
+      const verified = await verifyRun({ baseDir, runId });
+      if (!verified.valid) throw new Error(`Tidy evidence verification failed: ${verified.errors.join("; ")}`);
+      console.log(`Verified evidence: ${runId}`);
 
       if (cmd.outDir) {
         await exportArtifacts({
@@ -633,7 +647,12 @@ function parseArgs(argv: string[]): Command | null {
   if (sub === "verify") {
     const runId = rest[0];
     if (!runId) return null;
-    return { kind: "verify", runId };
+    let baseDir = process.env.BIOFLOW_BASE_DIR ?? ".bioflow";
+    for (let i = 1; i < rest.length; i++) {
+      if (rest[i] !== "--base-dir" || !rest[i + 1] || rest[i + 1]!.startsWith("--")) return null;
+      baseDir = rest[++i]!;
+    }
+    return { kind: "verify", runId, baseDir: path.resolve(baseDir) };
   }
 
   if (sub === "report") {
@@ -789,7 +808,7 @@ Usage:
   bioflow init <out.yaml>
   bioflow validate <workflow.yaml|json>
   bioflow run <workflow.yaml|json> --input <path> [--input <path> ...]
-  bioflow verify <runId>
+  bioflow verify <runId> [--base-dir <dir>]
   bioflow report <runId> [--format markdown] [--out <dir>] [--base-dir <dir>] [--no-replay]
   bioflow tidy <file> [--profile <name>] [--out <dir>] [--run-id <uuid>] [--remote-url <url>] [--org-id <uuid>] [--token <token>]
   bioflow push <runId> [--remote-url <url>] [--org-id <uuid>] [--token <token>] [--dry-run] [--profile-id <id>] [--tags a,b] [--visibility <v>]
@@ -2585,10 +2604,54 @@ async function exportArtifacts(params: {
   const cas = new LocalCAS(params.baseDir);
   const fs = await import("node:fs/promises");
 
-  for (const a of params.artifacts) {
+  const targets = params.artifacts.map((a) => {
     const safeName = path.basename(a.name).replace(/[^A-Za-z0-9._-]+/g, "_");
-    const bytes = await fs.readFile(cas.objectPath(a.sha256));
-    await writeFile(path.join(params.outDir, safeName), bytes);
+    return { artifact: a, target: path.join(params.outDir, safeName) };
+  });
+  if (new Set(targets.map((entry) => entry.target)).size !== targets.length) {
+    throw new Error("Export artifact names collide after normalization");
+  }
+  // Check the entire bundle before writing any file, including dangling symlinks.
+  for (const { target } of targets) {
+    try {
+      await lstat(target);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw error;
+    }
+    throw new Error(`Refusing to overwrite export: ${target}; choose a new output directory`);
+  }
+  const created: string[] = [];
+  try {
+    for (const { artifact, target } of targets) {
+      const bytes = await fs.readFile(cas.objectPath(artifact.sha256));
+      const handle = await open(target, "wx");
+      created.push(target);
+      try { await handle.writeFile(bytes); } finally { await handle.close(); }
+    }
+  } catch (error) {
+    await Promise.all(created.map((target) => unlink(target)));
+    throw error;
+  }
+}
+
+async function claimTidyRun(baseDir: string, runId: string): Promise<void> {
+  validateLocalRunId(runId);
+  const runsDir = path.join(baseDir, "runs");
+  await mkdir(runsDir, { recursive: true });
+  try {
+    await mkdir(path.join(runsDir, runId));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      throw new Error(`Run ID already exists: ${runId}; use a new run ID to preserve previous evidence`);
+    }
+    throw error;
+  }
+}
+
+function validateLocalRunId(runId: string): void {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(runId) || /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i.test(runId)) {
+    throw new Error("Invalid run ID: use 1-128 letters, digits, underscores or hyphens, starting with a letter or digit; Windows device names are reserved");
   }
 }
 
