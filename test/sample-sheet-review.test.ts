@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { previewSampleSheet } from "../src/clean/review.js";
+import { previewSampleSheet, validateSampleSheet } from "../src/clean/review.js";
+import { reviewSampleSheetText } from "../src/clean/sample-sheet.js";
 import { sampleSheetV1Profile } from "../src/clean/profiles/sample-sheet-v1.js";
 import { sha256Hex } from "../src/core/hash.js";
+import { spawnSync } from "node:child_process";
+import { sourceCommand } from "../scripts/lib/process-command.js";
 
 const preview = (text: string) => previewSampleSheet(Buffer.from(text), sampleSheetV1Profile);
 
@@ -70,4 +73,30 @@ describe("sample-sheet correction review", () => {
     expect(() => previewSampleSheet(Buffer.from([0xff]), sampleSheetV1Profile)).toThrow("valid UTF-8");
     expect(() => previewSampleSheet(Buffer.alloc(10 * 1024 * 1024 + 1), sampleSheetV1Profile)).toThrow("10 MiB");
   });
+
+  it("bounds details on a wide file while counting every change and preserving complete proposed output", () => {
+    const header = ["Sample_ID", "Index", ...Array.from({length: 254}, (_, i) => `Note${i}`)].join(',');
+    const row = (index: number) => [`ROW_${index}`, "ACGT", ...Array(254).fill(' value ')].join(',');
+    const input = header + '\r\n' + Array.from({length: 20}, (_, i) => row(i)).join('\r\n') + '\r\n';
+    const summary = reviewSampleSheetText(input, sampleSheetV1Profile, 0);
+    expect(summary.changes).toEqual([]);
+    expect(summary.changeCount).toBe(20 * 254);
+    const validation = validateSampleSheet(Buffer.from(input), sampleSheetV1Profile);
+    expect(validation.changeCount).toBe(20 * 254);
+    expect(validation).not.toHaveProperty("changes");
+    const result = preview(input);
+    expect(result.changes).toHaveLength(1_000);
+    expect(result.changeCount).toBe(20 * 254);
+    expect(result.changesTruncated).toBe(true);
+    expect(result.cleanedText.split('\r\n')[20]).toBe(['ROW_19', 'ACGT', ...Array(254).fill('value')].join(','));
+    expect(result.outputSha256).toBe(sha256Hex(result.cleanedText));
+  });
+
+  it("handles an 8 MB, two-million-change review within a 512 MB Node heap", () => {
+    const [command, args] = sourceCommand("test/fixtures/sample-sheet-review-limits.ts");
+    const result = spawnSync(command, ["--max-old-space-size=512", ...args], { encoding: "utf8", timeout: 20_000 });
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({rows: 8000, totalCellChanges: 2039999, retainedChanges: 1000});
+  }, 25_000);
 });

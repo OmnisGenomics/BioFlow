@@ -18,7 +18,7 @@ export async function readSampleSheetBytes(filePath: string): Promise<Buffer> {
   } finally { await file.close(); }
 }
 
-export function previewSampleSheet(bytes: Uint8Array, profile: unknown) {
+function buildReview(bytes: Uint8Array, profile: unknown, maxChanges: number) {
   if (bytes.byteLength > MAX_SAMPLE_SHEET_BYTES) throw new Error("Sample sheet exceeds the 10 MiB input limit");
   let text: string;
   try {
@@ -28,7 +28,7 @@ export function previewSampleSheet(bytes: Uint8Array, profile: unknown) {
     throw new Error("Sample sheet must be valid UTF-8; convert the input encoding before cleanup");
   }
   const parsedProfile = SampleSheetProfileSchema.parse(profile);
-  const result = reviewSampleSheetText(text, parsedProfile);
+  const result = reviewSampleSheetText(text, parsedProfile, maxChanges);
   const inputSha256 = sha256Hex(bytes);
   const outputSha256 = sha256Hex(new TextEncoder().encode(result.cleaned.cleanedText));
   const preview = {
@@ -42,10 +42,22 @@ export function previewSampleSheet(bytes: Uint8Array, profile: unknown) {
     rowCount: result.cleaned.idMappings.length,
     columns: { before: result.inputColumns, after: result.cleaned.outputColumns },
     changes: result.changes,
+    changeCount: result.changeCount,
+    changesTruncated: result.changeCount > result.changes.length,
     warnings: result.cleaned.warnings,
     // Formatting changes can exist even when no cell values change.
     formatting: { utf8BomRemoved: text.startsWith("\uFEFF"), outputDelimiter: ",", outputRecordNewline: "CRLF" },
     cleanedText: result.cleaned.cleanedText
   };
+  return preview;
+}
+
+export function previewSampleSheet(bytes: Uint8Array, profile: unknown) {
+  const preview = buildReview(bytes, profile, 1_000);
   return { ...preview, previewSha256: sha256Json(preview) };
+}
+
+export function validateSampleSheet(bytes: Uint8Array, profile: unknown) {
+  const result = buildReview(bytes, profile, 0);
+  return { schemaVersion: "sample-sheet-validation.v1", valid: true as const, needsChanges: result.needsChanges, rowCount: result.rowCount, changeCount: result.changeCount, warnings: result.warnings, errors: [] };
 }

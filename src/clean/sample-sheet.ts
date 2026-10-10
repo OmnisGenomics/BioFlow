@@ -49,13 +49,16 @@ export function cleanSampleSheetText(input: string, profile: SampleSheetProfile)
   return processSampleSheetText(input, profile).cleaned;
 }
 
-export function reviewSampleSheetText(input: string, profile: SampleSheetProfile): {
+export function reviewSampleSheetText(input: string, profile: SampleSheetProfile, maxChanges = 1_000): {
   cleaned: CleanSampleSheetResult;
   inputColumns: string[];
   changes: Array<{ row: number; column: string; before: string | null; after: string | null }>;
+  changeCount: number;
 } {
+  if (!Number.isSafeInteger(maxChanges) || maxChanges < 0 || maxChanges > 1_000) throw new Error("Detailed change limit must be between 0 and 1,000");
   const { cleaned, parsed, rows } = processSampleSheetText(input, profile);
   const changes: Array<{ row: number; column: string; before: string | null; after: string | null }> = [];
+  let changeCount = 0;
   const columns = [...new Set([...parsed.header, ...cleaned.outputColumns])];
   const inputIndexes = new Map(parsed.header.map((column, index) => [column, index]));
   const outputColumns = new Set(cleaned.outputColumns);
@@ -66,11 +69,12 @@ export function reviewSampleSheetText(input: string, profile: SampleSheetProfile
       const after = outputColumns.has(column) ? row[column] ?? "" : null;
       // Empty added/removed cells are represented by the header change.
       if (before !== after && !(before === null && after === "") && !(before === "" && after === null)) {
-        changes.push({ row: index + 1, column, before, after });
+        changeCount++;
+        if (changes.length < maxChanges) changes.push({ row: index + 1, column, before, after });
       }
     }
   });
-  return { cleaned, inputColumns: parsed.rawHeader, changes };
+  return { cleaned, inputColumns: parsed.rawHeader, changes, changeCount };
 }
 
 function processSampleSheetText(input: string, profile: SampleSheetProfile): {

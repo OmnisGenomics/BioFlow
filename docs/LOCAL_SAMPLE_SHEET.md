@@ -42,6 +42,8 @@ The preview hash binds the exact input bytes, validated profile rules, and compl
 
 `tidy` without `--accept-preview` keeps its direct-cleanup behavior. Review commands are new source-checkout capabilities and are not present in the previously published v0.0.2 package.
 
+Validation counts cell changes without retaining a detailed list. Preview retains at most 1,000 cell changes in row order and reports the full `changeCount` and `changesTruncated` flag. Human output explicitly warns when details are capped. JSON still contains the complete proposed file in `cleanedText`; inspect it before accepting a capped review. Header and formatting changes are separate from the cell count. Acceptance applies to the complete proposed cleanup; to change only selected values, edit the input and generate a fresh preview.
+
 ### Execute and verify
 
 Choose a fresh export directory for each invocation:

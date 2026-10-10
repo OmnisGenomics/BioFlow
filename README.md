@@ -86,6 +86,8 @@ npm run bioflow -- preview-sample-sheet ./SampleSheet.csv --json
 
 These commands are read-only and use the built-in `sample-sheet-v1` profile. Validation reports whether cleanup accepts the input and whether it would change it. Preview shows header and cell changes, warnings, and a review hash. Invalid files produce an error instead of partial proposed output.
 
+Preview displays up to 1,000 cell changes and warns when the list is capped. JSON includes the complete proposed file in `cleanedText`, which should be reviewed before accepting a large cleanup.
+
 To accept a reviewed preview, pass its hash to cleanup:
 
 ```bash

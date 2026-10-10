@@ -113,4 +113,25 @@ describe("read-only sample-sheet CLI review and acceptance", () => {
       expect(await readdir(w.root)).toEqual(["sample.csv"]);
     } finally { await rm(w.root, {recursive: true, force: true}); }
   });
+
+  it("makes capped details explicit in human and JSON previews and retains the complete proposed file", async () => {
+    const w = await workspace();
+    try {
+      const header = ['Sample_ID', 'Index', ...Array.from({length: 254}, (_, i) => `Note${i}`)].join(',');
+      const rows = Array.from({length: 5}, (_, i) => [`ROW_${i}`, 'ACGT', ...Array(254).fill(' value ')].join(','));
+      await writeFile(w.input, header + '\n' + rows.join('\n') + '\n');
+      const human = w.run(['preview-sample-sheet', w.input]);
+      expect(human.status, human.stderr).toBe(0);
+      expect(human.stdout).toContain('Showing 1000 of 1270 cell changes');
+      const json = JSON.parse(w.run(['preview-sample-sheet', w.input, '--json']).stdout);
+      expect(json.changesTruncated).toBe(true);
+      expect(json.changeCount).toBe(1270);
+      expect(json.changes).toHaveLength(1000);
+      expect(json.cleanedText.split('\r\n')[5]).toBe(['ROW_4', 'ACGT', ...Array(254).fill('value')].join(','));
+      const validation = JSON.parse(w.run(['validate-sample-sheet', w.input, '--json']).stdout);
+      expect(validation.changeCount).toBe(1270);
+      expect(validation).not.toHaveProperty('changes');
+      expect(await readdir(w.root)).toEqual(['sample.csv']);
+    } finally { await rm(w.root, {recursive: true, force: true}); }
+  });
 });

@@ -13,7 +13,7 @@ import { sha256Json } from "../core/hash.js";
 import { stableStringify } from "../core/stable-json.js";
 import { sampleSheetV1Profile } from "../clean/profiles/sample-sheet-v1.js";
 import { MAX_SAMPLE_SHEET_BYTES } from "../clean/sample-sheet.js";
-import { previewSampleSheet, readSampleSheetBytes } from "../clean/review.js";
+import { previewSampleSheet, readSampleSheetBytes, validateSampleSheet } from "../clean/review.js";
 import { loadCliConfig, resolveRemoteDefaults, saveCliConfig } from "./config.js";
 import { runBioFlowMcp } from "../mcp/main.js";
 import type { Workflow } from "../core/types.js";
@@ -362,11 +362,19 @@ async function main(): Promise<void> {
     case "sample-sheet-review": {
       try {
         const bytes = await readSampleSheetBytes(path.resolve(cmd.inputPath));
+        if (cmd.mode === "validate") {
+          const validation = validateSampleSheet(bytes, sampleSheetV1Profile);
+          if (cmd.json) printJson(validation);
+          else {
+            console.log(`Valid sample sheet: ${validation.rowCount} data row(s)`);
+            console.log(validation.needsChanges ? "Cleanup would change this file." : "Cleanup would leave this file unchanged.");
+            for (const warning of validation.warnings) console.log(`Warning: ${JSON.stringify(warning)}`);
+          }
+          return;
+        }
         const preview = previewSampleSheet(bytes, sampleSheetV1Profile);
-        if (cmd.mode === "preview" && cmd.json) {
+        if (cmd.json) {
           printJson(preview);
-        } else if (cmd.mode === "validate" && cmd.json) {
-          printJson({ schemaVersion: "sample-sheet-validation.v1", valid: true, needsChanges: preview.needsChanges, rowCount: preview.rowCount, changeCount: preview.changes.length, warnings: preview.warnings, errors: [] });
         } else {
           console.log(`Valid sample sheet: ${preview.rowCount} data row(s)`);
           console.log(preview.needsChanges ? "Cleanup would change this file." : "Cleanup would leave this file unchanged.");
@@ -377,6 +385,7 @@ async function main(): Promise<void> {
             for (const change of preview.changes) {
               console.log(`Row ${change.row}, ${JSON.stringify(change.column)}: ${JSON.stringify(change.before)} -> ${JSON.stringify(change.after)}`);
             }
+            if (preview.changesTruncated) console.log(`Showing ${preview.changes.length} of ${preview.changeCount} cell changes. Before accepting, inspect the complete proposed file using --json (cleanedText).`);
             if (preview.needsChanges) console.log("Output uses comma-separated UTF-8 without a BOM and CRLF record endings; blank records and quoting may be normalized. Use --json to inspect the complete proposed file.");
             console.log(`Preview SHA-256: ${preview.previewSha256}`);
             console.log(`To accept this review, run tidy on the same file with --accept-preview ${preview.previewSha256} and a fresh --out directory.`);
