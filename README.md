@@ -144,4 +144,4 @@ See `docs/MCP.md` for the current scope and `docs/MCP_CLIENTS.md` for launch/aut
 
 ## Contributing
 
-See `CONTRIBUTING.md` for the public-core contribution workflow and `docs/CLA.md` for the inbound license policy.
+See `CONTRIBUTING.md` for the public-core contribution workflow. Contributions are accepted under the repository's Apache 2.0 license.
