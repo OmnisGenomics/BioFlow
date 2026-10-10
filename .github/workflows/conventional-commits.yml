@@ -3,6 +3,8 @@ name: Conventional Commits
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -10,17 +12,25 @@ permissions:
 
 jobs:
   conventional-commits:
-    uses: OmnisGenomics/.github/.github/workflows/maintenance.yml@main
-    with:
-      check_flake: false
-      report_artifact_name: conventional-commits-${{ github.run_id }}-${{ github.run_attempt }}
-      maintenance_command: |
-        git fetch --no-tags --depth=2 origin "${GITHUB_REF_NAME}"
-        if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
-          rev_range=HEAD~1..HEAD
-        else
-          rev_range=HEAD
-        fi
-        nix run .#conventional-commits -- "$rev_range"
-    secrets:
-      MONARCHIC_GITHUB_PAT: ${{ secrets.MONARCHIC_GITHUB_PAT }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out commit history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check commit messages
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -n "$PR_BASE" ]; then
+            rev_range="$PR_BASE..$PR_HEAD"
+          elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            rev_range=HEAD~1..HEAD
+          else
+            rev_range=HEAD
+          fi
+          bash scripts/conventional-commit-check.sh --rev-range "$rev_range" \
+            --output out/conventional-commits-summary.json --allow-merge-commits --allow-git-revert
