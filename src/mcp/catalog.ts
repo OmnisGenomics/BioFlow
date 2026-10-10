@@ -44,6 +44,7 @@ const TOP_DOC_PATHS = [
   "README.md",
   "package.json",
   "docs/ARCHITECTURE.md",
+  "docs/SAMPLE_SHEET_EXAMPLE.md",
   "docs/KILLER_EXAMPLE.md",
   "docs/MCP.md",
   "docs/MCP_CLIENTS.md",
@@ -154,7 +155,7 @@ export function renderRepoSummary(index: RepositoryIndex, resources: ResourceDes
     `Workflow scripts: ${workflowSamples || "none detected"}`,
     `Suggested resources: ${resourceSamples || "none"}`,
     "",
-    "Start with `bioflow://resource/repo-summary`, `README.md`, `docs/OPEN_CORE.md`, `docs/MCP.md`, and `docs/KILLER_EXAMPLE.md`."
+    "Start with `bioflow://resource/repo-summary`, `README.md`, `docs/OPEN_CORE.md`, `docs/MCP.md`, and `docs/SAMPLE_SHEET_EXAMPLE.md`."
   ].join("\n");
 }
 
@@ -170,7 +171,7 @@ export function renderWorkflowInventory(index: RepositoryIndex): string {
   lines.push("- `docs/OPEN_CORE.md`");
   lines.push("- `docs/MCP.md`");
   lines.push("- `docs/MCP_CLIENTS.md`");
-  lines.push("- `docs/KILLER_EXAMPLE.md`");
+  lines.push("- `docs/SAMPLE_SHEET_EXAMPLE.md`");
   return lines.join("\n");
 }
 
@@ -185,7 +186,7 @@ async function buildResourceCatalog(repoRoot: string): Promise<ResourceDescripto
     {
       uri: "bioflow://resource/workflow-inventory",
       name: "Workflow Inventory",
-      description: "Generated inventory of package scripts and operational surfaces.",
+      description: "Lists package scripts and documentation for running workflows.",
       mimeType: "text/markdown"
     }
   ];

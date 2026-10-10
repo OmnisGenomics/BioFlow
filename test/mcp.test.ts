@@ -51,6 +51,7 @@ async function createFixtureRepo(): Promise<string> {
       "This file exists so the MCP search tool has a stable docs hit."
     ].join("\n")
   );
+  await writeFile(path.join(root, "docs", "SAMPLE_SHEET_EXAMPLE.md"), "# Sample-sheet workflow example\nCleanup and verification steps.\n");
 
   await writeFile(
     path.join(root, "docs", "wiki", "index.md"),
@@ -252,6 +253,7 @@ describe("BioFlow MCP", () => {
           "bioflow://resource/repo-summary",
           "bioflow://resource/workflow-inventory",
           "bioflow://resource/mcp/session",
+          "bioflow://file/docs/SAMPLE_SHEET_EXAMPLE.md",
           "bioflow://wiki/index",
           "bioflow://wiki/workflows",
           "bioflow://file/src/core/validate.ts"
@@ -263,6 +265,13 @@ describe("BioFlow MCP", () => {
 
       const sourceRead = byId.get(4)?.result as { contents?: Array<{ text?: string }> } | undefined;
       expect(sourceRead?.contents?.[0]?.text).toContain("validateMcpFixture");
+      for (const uri of ["bioflow://resource/repo-summary", "bioflow://resource/workflow-inventory"]) {
+        const response = await server.handleMessage({jsonrpc: "2.0", id: 5, method: "resources/read", params: {uri}});
+        expect(JSON.stringify(response)).toContain("docs/SAMPLE_SHEET_EXAMPLE.md");
+        expect(JSON.stringify(response)).not.toContain("docs/KILLER_EXAMPLE.md");
+      }
+      const guide = await server.handleMessage({jsonrpc: "2.0", id: 6, method: "resources/read", params: {uri: "bioflow://file/docs/SAMPLE_SHEET_EXAMPLE.md"}});
+      expect(JSON.stringify(guide)).toContain("Cleanup and verification steps.");
     } finally {
       await rm(repoRoot, { recursive: true, force: true });
     }
