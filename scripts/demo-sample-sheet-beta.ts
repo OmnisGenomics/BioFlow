@@ -1,3 +1,4 @@
+import { bioflowCommand } from "./lib/process-command.js";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { mkdir, rm } from "node:fs/promises";
@@ -109,7 +110,7 @@ async function runBioflowCommand(params: {
   step: string;
 }): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn("npm", ["run", "-s", "bioflow", "--", ...params.args], {
+    const child = spawn(...bioflowCommand(params.args), {
       env: { ...process.env, BIOFLOW_BASE_DIR: params.baseDir },
       stdio: ["ignore", "pipe", "pipe"]
     });

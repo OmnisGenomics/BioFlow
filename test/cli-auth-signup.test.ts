@@ -1,3 +1,4 @@
+import { bioflowCommand } from "../scripts/lib/process-command.js";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { createServer, IncomingMessage } from "node:http";
@@ -5,8 +6,6 @@ import { AddressInfo } from "node:net";
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
-
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 
 interface CliRunResult {
   status: number | null;
@@ -415,7 +414,7 @@ async function closeServer(server: ReturnType<typeof createServer>): Promise<voi
 
 async function runCli(args: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<CliRunResult> {
   return await new Promise<CliRunResult>((resolve, reject) => {
-    const child = spawn(npmCmd, ["run", "-s", "bioflow", "--", ...args], {
+    const child = spawn(...bioflowCommand([...args]), {
       cwd,
       env,
       stdio: ["ignore", "pipe", "pipe"]

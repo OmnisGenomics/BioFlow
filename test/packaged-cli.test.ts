@@ -1,11 +1,12 @@
+import { nodeCommand, npmCommand } from "../scripts/lib/process-command.js";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { createMockHostedSelfServeServer } from "./helpers/mock-hosted-self-serve.js";
 
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 const runPackagedCliTest = process.env.BIOFLOW_RUN_PACKAGED_CLI_TEST === "1";
 
 interface CommandResult {
@@ -14,9 +15,22 @@ interface CommandResult {
   stderr: string;
 }
 
-function runCommand(args: string[], cwd: string, timeoutMs = 120_000): Promise<CommandResult> {
+function runNpm(args: string[], cwd: string, timeoutMs = 120_000): Promise<CommandResult> {
+  return runCommand(npmCommand(args), cwd, timeoutMs);
+}
+
+function runPackagedCli(args: string[], cwd: string, timeoutMs = 120_000): Promise<CommandResult> {
+  const packageRoot = path.join(cwd, "node_modules", "@bioflow", "cli");
+  const manifest = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")) as {
+    bin: { bioflow: string };
+  };
+  const cliPath = path.resolve(packageRoot, manifest.bin.bioflow);
+  return runCommand(nodeCommand(cliPath, args), cwd, timeoutMs);
+}
+
+function runCommand(command: [string, string[]], cwd: string, timeoutMs: number): Promise<CommandResult> {
   return new Promise((resolve) => {
-    const child = spawn(npmCmd, args, {
+    const child = spawn(...command, {
       cwd,
       env: { ...process.env, CI: "1", npm_config_yes: "true" },
       stdio: ["ignore", "pipe", "pipe"]
@@ -64,10 +78,10 @@ describe("packaged CLI", () => {
   testCase("builds, packs, installs, and executes packaged autopilot flow", async () => {
     const repoRoot = path.resolve(".");
 
-    const build = await runCommand(["run", "build"], repoRoot);
+    const build = await runNpm(["run", "build"], repoRoot);
     expect(build.status, build.stderr).toBe(0);
 
-    const pack = await runCommand(["pack", "--json"], repoRoot);
+    const pack = await runNpm(["pack", "--json"], repoRoot);
     expect(pack.status, pack.stderr).toBe(0);
     const packed = JSON.parse(pack.stdout.trim()) as Array<{ filename?: string }>;
     const tarballName = packed[0]?.filename;
@@ -76,21 +90,21 @@ describe("packaged CLI", () => {
 
     const tempDir = await mkdtemp(path.join(tmpdir(), "bioflow-packaged-cli-"));
     try {
-      const init = await runCommand(["init", "-y"], tempDir);
+      const init = await runNpm(["init", "-y"], tempDir);
       expect(init.status, init.stderr).toBe(0);
 
-      const install = await runCommand(
+      const install = await runNpm(
         ["install", "--no-audit", "--no-fund", "--ignore-scripts", "--omit=dev", "--prefer-offline", tarballPath],
         tempDir,
         600_000
       );
       expect(install.status, install.stderr).toBe(0);
 
-      const help = await runCommand(["exec", "--yes", "--", "bioflow", "--help"], tempDir);
+      const help = await runPackagedCli(["--help"], tempDir);
       expect(help.status, help.stderr).toBe(0);
       expect(help.stdout).toContain("Usage:");
 
-      const autopilotHelp = await runCommand(["exec", "--yes", "--", "bioflow", "autopilot:run", "--help"], tempDir);
+      const autopilotHelp = await runPackagedCli(["autopilot:run", "--help"], tempDir);
       expect(autopilotHelp.status, autopilotHelp.stderr).toBe(2);
       expect(autopilotHelp.stdout).toContain("bioflow autopilot:run");
 
@@ -100,12 +114,7 @@ describe("packaged CLI", () => {
         const configPath = path.join(tempDir, ".bioflow-ci", "config.json");
         const outPath = path.join(tempDir, "autopilot-summary.json");
 
-        const autopilotRun = await runCommand(
-          [
-            "exec",
-            "--yes",
-            "--",
-            "bioflow",
+        const autopilotRun = await runPackagedCli([
             "autopilot:run",
             "--remote-url",
             mockHosted.baseUrl,
@@ -135,7 +144,7 @@ describe("packaged CLI", () => {
         expect(summary.configPath).toBe(path.resolve(configPath));
         expect(summary.nextAction).toBe("billing_configured");
 
-        const gate = await runCommand(["exec", "--yes", "--", "bioflow", "autopilot:gate", outPath, "--json"], tempDir);
+        const gate = await runPackagedCli(["autopilot:gate", outPath, "--json"], tempDir);
         expect(gate.status, `${gate.stdout}\n${gate.stderr}`).toBe(0);
         expect(gate.stdout).toContain('"ok": true');
         expect(gate.stdout).toContain('"gate": "pass"');

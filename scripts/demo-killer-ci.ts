@@ -1,3 +1,4 @@
+import { sourceCommand } from "./lib/process-command.js";
 import { spawn } from "node:child_process";
 import { access } from "node:fs/promises";
 
@@ -37,7 +38,7 @@ async function main(): Promise<void> {
 
 async function runDemoKiller(): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn("npm", ["run", "-s", "demo:killer"], {
+    const child = spawn(...sourceCommand("scripts/demo-killer.ts"), {
       stdio: ["ignore", "pipe", "pipe"]
     });
 
