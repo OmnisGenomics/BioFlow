@@ -1,6 +1,7 @@
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { verifyAuditChain } from "./audit.js";
+import { verifyExecutionAudit } from "./verify-audit.js";
 import { LocalCAS, parseSha256Uri } from "./cas.js";
 import { sha256FileHex } from "./hash.js";
 import { RunManifestStore } from "./run-manifest.js";
@@ -42,6 +43,7 @@ export async function verifyRun(params: VerifyParams): Promise<VerifyResult> {
 
   const auditCheck = verifyAuditChain(record.execution.auditLog);
   if (!auditCheck.ok) errors.push(auditCheck.error ?? "Audit chain verification failed");
+  if (record.execution.runId !== params.runId) errors.push("Execution runId does not match requested runId");
 
   const manifests = new RunManifestStore(params.baseDir);
   let manifest;
@@ -85,11 +87,20 @@ export async function verifyRun(params: VerifyParams): Promise<VerifyResult> {
     return { valid: false, errors };
   }
 
+  if (errors.length > 0) return { valid: false, errors };
+  let workflow;
+  try {
+    workflow = assertValidWorkflow(await readCasJson(cas, workflowArtifact.sha256));
+  } catch (err) {
+    return { valid: false, errors: [
+      "Missing or invalid stored workflow",
+      err instanceof Error ? err.message : String(err)
+    ] };
+  }
+  errors.push(...verifyExecutionAudit(record, workflow));
+
   // Replay deterministically and compare output digests (names -> sha256).
   if (replay && errors.length === 0) {
-    const workflowJson = await readCasJson(cas, workflowArtifact.sha256);
-    const workflow = assertValidWorkflow(workflowJson);
-
     const inputArtifacts = manifest.inputs.map((n) => manifest.artifacts[n]).filter(Boolean);
     if (inputArtifacts.length !== manifest.inputs.length) {
       errors.push("Manifest inputs list references missing artifacts.");
@@ -105,6 +116,9 @@ export async function verifyRun(params: VerifyParams): Promise<VerifyResult> {
       runId: params.runId,
       persistExecution: false
     });
+    if (replayRes.execution.status !== record.execution.status) {
+      errors.push(`Replay status mismatch: expected ${record.execution.status}, got ${replayRes.execution.status}`);
+    }
 
     const expected = new Map(record.execution.outputs.map((a) => [a.name, a.sha256]));
     const actual = new Map(replayRes.execution.outputs.map((a) => [a.name, a.sha256]));

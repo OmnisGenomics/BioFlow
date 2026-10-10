@@ -262,6 +262,7 @@ function cleanDataRows(
 
   const idMappings: SampleIdMappingRow[] = [];
   const counts = new Map<string, number>();
+  const usedIds = new Set<string>();
   let hasLane = false;
   let hasIndex2 = false;
 
@@ -271,10 +272,16 @@ function cleanDataRows(
 
     const normalizedSampleId = normalizeSampleId(rawSampleId, profile.rules.sampleId.maxLen);
     const base = normalizedSampleId; // prior to dedupe suffix
-    const seen = counts.get(base) ?? 0;
-    const finalSampleId =
-      seen === 0 ? base : dedupeSampleId(base, seen, profile.rules.sampleId.maxLen);
+    let seen = counts.get(base) ?? 0;
+    let finalSampleId = seen === 0 ? base : dedupeSampleId(base, seen, profile.rules.sampleId.maxLen);
+    // Normalized bases and generated suffixes share the same ID namespace.
+    // Reserve every final ID, including candidates produced by truncation.
+    while (usedIds.has(finalSampleId)) {
+      seen++;
+      finalSampleId = dedupeSampleId(base, seen, profile.rules.sampleId.maxLen);
+    }
     counts.set(base, seen + 1);
+    usedIds.add(finalSampleId);
 
     idMappings.push({
       row: idx + 1,
@@ -312,7 +319,10 @@ function normalizeSampleId(raw: string, maxLen: number): string {
 
 function dedupeSampleId(base: string, duplicateIndex: number, maxLen: number): string {
   const suffix = `_${String(duplicateIndex).padStart(3, "0")}`;
-  const prefixMax = Math.max(1, maxLen - suffix.length);
+  const prefixMax = maxLen - suffix.length;
+  if (prefixMax < 1) {
+    throw new Error(`Cannot generate unique Sample_ID within maxLen ${maxLen}: suffix ${suffix} needs a prefix`);
+  }
   const prefix = base.length > prefixMax ? base.slice(0, prefixMax) : base;
   return `${prefix}${suffix}`;
 }
