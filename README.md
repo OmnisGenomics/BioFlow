@@ -8,6 +8,15 @@ See [license and repository scope](docs/OPEN_CORE.md) for the distinction betwee
 
 ## Quickstart
 
+For the packaged CLI, download `bioflow-cli-0.0.3.tgz` and `SHA256SUMS.txt` from [GitHub Releases](https://github.com/OmnisGenomics/BioFlow/releases), verify the checksum, and install using Node 22 or 24:
+
+```bash
+npm install --omit=dev --ignore-scripts ./bioflow-cli-0.0.3.tgz
+npx --no-install bioflow --help
+```
+
+For a source checkout:
+
 ```bash
 corepack pnpm install --frozen-lockfile --ignore-scripts
 npm run build

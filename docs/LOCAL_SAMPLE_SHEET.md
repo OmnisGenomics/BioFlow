@@ -4,7 +4,7 @@ This guide covers the local `tidy`, `verify`, and `report` path. Hosted sync, re
 
 ## Runtime and installation
 
-Use Node 22 or 24 for deployment. CI checks Linux on Node 20/22/24 and Windows on Node 22/24, including installing and exercising the packaged CLI without the source checkout. Install a versioned package tarball from a tested commit; retain the tarball and its SHA-256 alongside deployment records. Version 0.0.2 pins the two runtime dependencies to the versions in the repository lockfile.
+Use Node 22 or 24 for deployment. CI checks Linux on Node 20/22/24 and Windows on Node 22/24, including installing and exercising the packaged CLI without the source checkout. Install a versioned package tarball from a tested commit; retain the tarball and its SHA-256 alongside deployment records. The two runtime dependencies are pinned to the versions in the repository lockfile.
 
 Build and validate a checkout before packaging:
 
@@ -40,7 +40,7 @@ The preview includes original and proposed headers, cell changes, warnings, comp
 
 The preview hash binds the exact input bytes, validated profile rules, and complete review including the proposed output. `tidy --accept-preview` recomputes the review before creating a run and rejects a mismatch. It stores the matching input snapshot, so later edits to the source cannot change that accepted run. After an input edit, profile change, or implementation upgrade that changes the review, generate and review a fresh preview. The hash verifies a matching review; it is not a signature or evidence of a particular person's approval.
 
-`tidy` without `--accept-preview` keeps its direct-cleanup behavior. Review commands are new source-checkout capabilities and are not present in the previously published v0.0.2 package.
+`tidy` without `--accept-preview` keeps its direct-cleanup behavior. Validation, preview, and guarded acceptance are included in v0.0.3 and later; the previously published v0.0.2 package does not include them.
 
 Validation counts cell changes without retaining a detailed list. Preview retains at most 1,000 cell changes in row order and reports the full `changeCount` and `changesTruncated` flag. Human output explicitly warns when details are capped. JSON still contains the complete proposed file in `cleanedText`; inspect it before accepting a capped review. Header and formatting changes are separate from the cell count. Acceptance applies to the complete proposed cleanup; to change only selected values, edit the input and generate a fresh preview.
 
