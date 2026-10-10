@@ -3,6 +3,9 @@ import { appendAudit, verifyAuditChain } from "../src/core/audit.js";
 import type { AuditEntry } from "../src/core/types.js";
 
 describe("audit", () => {
+  it("rejects missing audit evidence", () => {
+    expect(verifyAuditChain([])).toEqual({ ok: false, error: "Audit log is empty" });
+  });
   it("chains hashes deterministically", () => {
     const log: AuditEntry[] = [];
     appendAudit(log, { actor: "a", action: "x", details: { n: 1 }, at: "2026-02-04T00:00:00.000Z" });

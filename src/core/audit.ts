@@ -21,6 +21,7 @@ export function appendAudit(
 }
 
 export function verifyAuditChain(auditLog: AuditEntry[]): { ok: boolean; error?: string } {
+  if (auditLog.length === 0) return { ok: false, error: "Audit log is empty" };
   let expectedPrev: string | null = null;
   for (let i = 0; i < auditLog.length; i++) {
     const entry = auditLog[i]!;

@@ -1,0 +1,2 @@
+# Content-addressed fixture objects must retain their exact bytes on Windows.
+test/fixtures/golden-run-v1/objects/** -text

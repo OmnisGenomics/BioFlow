@@ -85,6 +85,8 @@ npm run bioflow -- verify <runId>
 
 Outputs include a cleaned CSV, a data-only CSV, an ID mapping JSON, and a report JSON (all content-addressed under `.bioflow/objects/...`).
 
+Sample IDs are normalized and allocated deterministically in row order. Final IDs are unique, including when a generated suffix collides with another row's ID. Duplicates use `_001`, `_002`, etc., shortening the base to respect the profile's `maxLen` (32 by default). If the suffix and at least one base character cannot fit, cleaning fails explicitly instead of exceeding the limit.
+
 Artifacts and execution records are written under `.bioflow/`:
 
 - `.bioflow/objects/<shard>/<hash>`: content-addressed bytes (SHA-256)
@@ -144,4 +146,4 @@ See `docs/MCP.md` for the current scope and `docs/MCP_CLIENTS.md` for launch/aut
 
 ## Contributing
 
-See `CONTRIBUTING.md` for the public-core contribution workflow and `docs/CLA.md` for the inbound license policy.
+See `CONTRIBUTING.md` for the public-core contribution workflow. Contributions are accepted under the repository's Apache 2.0 license.
