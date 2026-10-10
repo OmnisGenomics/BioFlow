@@ -1,6 +1,6 @@
 {
   "name": "@bioflow/cli",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
   "license": "Apache-2.0",
   "type": "module",
@@ -23,6 +23,7 @@
   "files": [
     "dist",
     "README.md",
+    "docs/LOCAL_SAMPLE_SHEET.md",
     "LICENSE"
   ],
   "publishConfig": {
@@ -53,8 +54,8 @@
     "pack:cli": "npm pack --json"
   },
   "dependencies": {
-    "yaml": "^2.8.1",
-    "zod": "^4.1.5"
+    "yaml": "2.8.3",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

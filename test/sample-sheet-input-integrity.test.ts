@@ -42,7 +42,8 @@ describe("sample-sheet input integrity", () => {
 
   it.each([
     ["extra fields", "Sample_ID,Index\nalpha,ACGT,metadata\n", "Expected at most 2 fields"],
-    ["unterminated quote", "Sample_ID,Index,Note\nalpha,ACGT,valid\nbeta,TGCA,\"unfinished\n", "Unterminated quoted field"]
+    ["unterminated quote", "Sample_ID,Index,Note\nalpha,ACGT,valid\nbeta,TGCA,\"unfinished\n", "Unterminated quoted field"],
+    ["invalid UTF-8", Buffer.concat([Buffer.from("Sample_ID,Index,Note\nalpha,ACGT,"), Buffer.from([0xff]), Buffer.from("\n")]), "must be valid UTF-8"]
   ])("tidy exits unsuccessfully for %s and retains verifiable failure evidence", async (_name, input, error) => {
     const workspace = await mkdtemp(path.resolve(".bioflow_tidy_input_"));
     try {

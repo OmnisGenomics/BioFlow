@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const MAX_SAMPLE_SHEET_BYTES = 10 * 1024 * 1024;
+const MAX_COLUMNS = 256;
+const MAX_TABLE_ROWS = 100_001; // header plus 100,000 records
+const MAX_EXPANDED_LANES = 10_000;
+
 const IupacDnaSchema = z
   .string()
   .min(1)
@@ -41,6 +46,9 @@ export interface CleanSampleSheetResult {
 }
 
 export function cleanSampleSheetText(input: string, profile: SampleSheetProfile): CleanSampleSheetResult {
+  if (Buffer.byteLength(input, "utf8") > MAX_SAMPLE_SHEET_BYTES) {
+    throw new Error("Sample sheet exceeds the 10 MiB input limit");
+  }
   const normalized = normalizeText(input);
   const parsed = parseSampleSheet(normalized);
 
@@ -94,18 +102,29 @@ type ParsedSampleSheet =
     };
 
 function parseSampleSheet(text: string): ParsedSampleSheet {
-  const lines = text.split("\n").map((l) => l.replace(/\s+$/, "")); // trim trailing whitespace
-  const dataIdx = lines.findIndex((l) => /^\s*\[data\]\s*$/i.test(l));
+  const lines = text.split("\n");
+  // A section-looking line within a quoted field is metadata, not a boundary.
+  const firstLine = lines.find((line) => line.trim().length > 0) ?? "";
+  const sectioned = /^\s*\[[^\]]+\]\s*$/.test(firstLine);
+  const dataIdx = sectioned ? lines.findIndex((l) => /^\s*\[data\]\s*$/i.test(l)) : -1;
+  if (sectioned && dataIdx === -1) throw new Error("SampleSheet is missing a [Data] section");
   if (dataIdx !== -1) {
     const preludeLines = lines.slice(0, dataIdx + 1).filter((l) => l !== undefined);
     const { headerLineIdx, endIdx } = findDataTableBounds(lines, dataIdx + 1);
-    const tableLines = lines.slice(headerLineIdx, endIdx).filter((l) => l.trim().length > 0);
+    const tableLines = lines.slice(headerLineIdx, endIdx);
     if (tableLines.length === 0) throw new Error("SampleSheet [Data] section is missing a header row");
 
     const delimiter = detectDelimiter(tableLines[0]!);
     const table = parseDelimited(tableLines.join("\n") + "\n", delimiter);
     const { header, dataRows } = tableToRecords(table);
     const suffixLines = lines.slice(endIdx).filter((l) => l !== undefined);
+    let suffixInQuotes = false;
+    for (const line of suffixLines) {
+      if (!suffixInQuotes && /^\s*\[data\]\s*$/i.test(line)) {
+        throw new Error("SampleSheet contains multiple [Data] sections");
+      }
+      suffixInQuotes = quoteStateAfter(line, suffixInQuotes);
+    }
 
     return { kind: "illumina", preludeLines, suffixLines, header, dataRows };
   }
@@ -125,7 +144,9 @@ function findDataTableBounds(
   for (let i = startIdx; i < lines.length; i++) {
     const l = lines[i] ?? "";
     if (l.trim().length === 0) continue;
-    if (/^\s*\[[^\]]+\]\s*$/.test(l)) continue;
+    if (/^\s*\[[^\]]+\]\s*$/.test(l)) {
+      throw new Error("SampleSheet [Data] section is missing a header row");
+    }
     headerLineIdx = i;
     break;
   }
@@ -134,21 +155,43 @@ function findDataTableBounds(
   }
 
   let endIdx = lines.length;
+  let inQuotes = false;
+  inQuotes = quoteStateAfter(lines[headerLineIdx] ?? "", inQuotes);
   for (let i = headerLineIdx + 1; i < lines.length; i++) {
     const l = lines[i] ?? "";
-    if (/^\s*\[[^\]]+\]\s*$/.test(l)) {
+    if (!inQuotes && /^\s*\[[^\]]+\]\s*$/.test(l)) {
       endIdx = i;
       break;
     }
+    inQuotes = quoteStateAfter(l, inQuotes);
   }
 
   return { headerLineIdx, endIdx };
 }
 
 function detectDelimiter(line: string): "," | "\t" {
-  const commas = (line.match(/,/g) ?? []).length;
-  const tabs = (line.match(/\t/g) ?? []).length;
+  let commas = 0;
+  let tabs = 0;
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') {
+      if (inQuotes && line[i + 1] === '"') { i++; continue; }
+      inQuotes = !inQuotes;
+    } else if (!inQuotes) {
+      if (line[i] === ",") commas++;
+      if (line[i] === "\t") tabs++;
+    }
+  }
   return tabs > commas ? "\t" : ",";
+}
+
+function quoteStateAfter(line: string, inQuotes: boolean): boolean {
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] !== '"') continue;
+    if (inQuotes && line[i + 1] === '"') { i++; continue; }
+    inQuotes = !inQuotes;
+  }
+  return inQuotes;
 }
 
 function parseDelimited(text: string, delimiter: "," | "\t"): string[][] {
@@ -156,6 +199,7 @@ function parseDelimited(text: string, delimiter: "," | "\t"): string[][] {
   let row: string[] = [];
   let field = "";
   let inQuotes = false;
+  let quoteClosed = false;
 
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]!;
@@ -168,6 +212,7 @@ function parseDelimited(text: string, delimiter: "," | "\t"): string[][] {
           continue;
         }
         inQuotes = false;
+        quoteClosed = true;
         continue;
       }
       field += ch;
@@ -175,26 +220,39 @@ function parseDelimited(text: string, delimiter: "," | "\t"): string[][] {
     }
 
     if (ch === '"') {
+      if (quoteClosed || field.trim().length > 0) {
+        throw new Error(`Record ${rows.length + 1}: Unexpected quote in unquoted field`);
+      }
+      field = "";
       inQuotes = true;
       continue;
     }
 
     if (ch === delimiter) {
       row.push(field);
+      if (row.length >= MAX_COLUMNS) throw new Error("Sample sheet exceeds the 256 columns limit");
       field = "";
+      quoteClosed = false;
       continue;
     }
 
     if (ch === "\n") {
       row.push(field);
       rows.push(row);
+      if (rows.length > MAX_TABLE_ROWS) throw new Error("Sample sheet exceeds the 100,000 records limit");
       row = [];
       field = "";
+      quoteClosed = false;
       continue;
     }
 
     // Ignore stray \r (should be normalized away, but be defensive).
     if (ch === "\r") continue;
+
+    if (quoteClosed) {
+      if (ch === " " || ch === "\t") continue;
+      throw new Error(`Record ${rows.length + 1}: Unexpected character after closing quote`);
+    }
 
     field += ch;
   }
@@ -230,7 +288,7 @@ function tableToRecords(table: string[][]): { header: string[]; dataRows: Record
     if (row.length > header.length) {
       throw new Error(`Row ${r}: Expected at most ${header.length} fields, got ${row.length}`);
     }
-    const obj: Record<string, string> = {};
+    const obj: Record<string, string> = Object.create(null);
     for (let c = 0; c < header.length; c++) {
       const key = header[c]!;
       obj[key] = String(row[c] ?? "").trim();
@@ -296,8 +354,16 @@ function cleanDataRows(
     });
 
     const { i7, i5 } = normalizeIndex(row["Index"] ?? "", row["Index2"]);
+    if (i5 && !profile.rules.index.allowDual) throw new Error(`Row ${idx + 1}: Dual indexes are not allowed`);
+    const declaredDual = row["Index_Dual"]?.trim().toUpperCase();
+    if (declaredDual && declaredDual !== (i5 ? `${i7}+${i5}` : "")) {
+      throw new Error(`Row ${idx + 1}: Index_Dual does not match Index and Index2`);
+    }
     if (i5) hasIndex2 = true;
     const laneRaw = row["Lane"];
+    if (laneRaw === undefined && !profile.rules.lane.allowMissing) {
+      throw new Error(`Row ${idx + 1}: Lane is required`);
+    }
     if (laneRaw !== undefined) {
       hasLane = true;
     }
@@ -339,12 +405,11 @@ function normalizeIndex(index: string, index2?: string | undefined): { i7: strin
   let i7 = raw;
   let i5 = index2 ? String(index2).trim() : undefined;
 
-  if (!i5) {
-    const split = splitDualIndex(raw);
-    if (split) {
-      i7 = split.i7;
-      i5 = split.i5;
-    }
+  const split = splitDualIndex(raw);
+  if (split) {
+    if (i5 && i5.toUpperCase() !== split.i5.toUpperCase()) throw new Error("Combined Index conflicts with Index2");
+    i7 = split.i7;
+    i5 = split.i5;
   }
 
   i7 = IupacDnaSchema.parse(i7.toUpperCase());
@@ -375,18 +440,22 @@ function normalizeLane(
     if (range) {
       const start = Number(range[1]);
       const end = Number(range[2]);
-      if (!Number.isInteger(start) || !Number.isInteger(end)) {
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < 1) {
         throw new Error(`Row ${rowNumber}: Invalid lane range: ${part}`);
       }
       const a = Math.min(start, end);
       const b = Math.max(start, end);
+      if (b - a + 1 > MAX_EXPANDED_LANES - lanes.length) {
+        throw new Error(`Row ${rowNumber}: Lane expansion exceeds 10,000 entries`);
+      }
       for (let i = a; i <= b; i++) lanes.push(i);
       continue;
     }
     const single = /^\d+$/.test(part) ? Number(part) : NaN;
-    if (!Number.isInteger(single)) {
+    if (!Number.isSafeInteger(single) || single < 1) {
       throw new Error(`Row ${rowNumber}: Invalid lane: ${part}`);
     }
+    if (lanes.length >= MAX_EXPANDED_LANES) throw new Error(`Row ${rowNumber}: Lane expansion exceeds 10,000 entries`);
     lanes.push(single);
   }
 
@@ -421,8 +490,8 @@ function formatIlluminaSampleSheet(params: {
   for (const l of params.preludeLines) outLines.push(l);
   // cleanedDataCsv already ends with newline(s); split and re-join as CRLF.
   const dataLines = params.cleanedDataCsv.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  if (dataLines[dataLines.length - 1] === "") dataLines.pop();
   for (const l of dataLines) {
-    if (l.length === 0) continue;
     outLines.push(l);
   }
   for (const l of params.suffixLines) outLines.push(l);

@@ -87,6 +87,8 @@ Outputs include a cleaned CSV, a data-only CSV, an ID mapping JSON, and a report
 
 Cleanup rejects unterminated quoted fields and rows with more fields than the header, so malformed input cannot silently lose rows or metadata. Omitted trailing optional fields remain supported.
 
+For local deployment, supported inputs, limits, backup/restore, and failure handling, see [the local sample-sheet CLI guide](docs/LOCAL_SAMPLE_SHEET.md). Successful cleanup verifies evidence before exporting; existing run IDs and export files are never overwritten by `tidy`.
+
 Sample IDs are normalized and allocated deterministically in row order. Final IDs are unique, including when a generated suffix collides with another row's ID. Duplicates use `_001`, `_002`, etc., shortening the base to respect the profile's `maxLen` (32 by default). If the suffix and at least one base character cannot fit, cleaning fails explicitly instead of exceeding the limit.
 
 Artifacts and execution records are written under `.bioflow/`:

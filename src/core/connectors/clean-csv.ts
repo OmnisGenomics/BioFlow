@@ -1,10 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { TextDecoder } from "node:util";
 import type { Connector, ConnectorContext, ConnectorResult } from "./connector.js";
 import { LocalCAS } from "../cas.js";
 import { stableStringify } from "../stable-json.js";
 import {
   cleanSampleSheetText,
+  MAX_SAMPLE_SHEET_BYTES,
   SampleSheetProfileSchema,
   type SampleSheetProfile
 } from "../../clean/sample-sheet.js";
@@ -26,8 +27,15 @@ export class CleanCsvConnector implements Connector {
     }
     const input = ctx.inputs[0]!;
     const cas = new LocalCAS(ctx.store.baseDir());
-    const inputBytes = await readFile(cas.objectPath(input.sha256));
-    const text = new TextDecoder("utf-8", { fatal: false }).decode(inputBytes);
+    const inputPath = cas.objectPath(input.sha256);
+    if ((await stat(inputPath)).size > MAX_SAMPLE_SHEET_BYTES) throw new Error("Sample sheet exceeds the 10 MiB input limit");
+    const inputBytes = await readFile(inputPath);
+    let text: string;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(inputBytes);
+    } catch {
+      throw new Error("Sample sheet must be valid UTF-8; convert the input encoding before cleanup");
+    }
 
     const profile = parseProfile(ctx.params.profile);
     const res = cleanSampleSheetText(text, profile);

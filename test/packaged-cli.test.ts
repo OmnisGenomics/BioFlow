@@ -3,7 +3,7 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { createMockHostedSelfServeServer } from "./helpers/mock-hosted-self-serve.js";
 
@@ -99,6 +99,8 @@ describe("packaged CLI", () => {
         600_000
       );
       expect(install.status, install.stderr).toBe(0);
+      expect(await readFile(path.join(tempDir, "node_modules", "@bioflow", "cli", "docs", "LOCAL_SAMPLE_SHEET.md"), "utf8"))
+        .toContain("Local sample-sheet CLI operations");
 
       const help = await runPackagedCli(["--help"], tempDir);
       expect(help.status, help.stderr).toBe(0);
@@ -107,6 +109,30 @@ describe("packaged CLI", () => {
       const autopilotHelp = await runPackagedCli(["autopilot:run", "--help"], tempDir);
       expect(autopilotHelp.status, autopilotHelp.stderr).toBe(2);
       expect(autopilotHelp.stdout).toContain("bioflow autopilot:run");
+
+      // Exercise the installed local CLI without a source checkout or remote service.
+      const samplePath = path.join(tempDir, "sample.csv");
+      const localStore = path.join(tempDir, "local-store");
+      const localOut = path.join(tempDir, "cleaned");
+      await writeFile(samplePath, 'Sample_ID,Index,Note\nalpha-1,acgt,"quoted, metadata"\n');
+      const tidy = await runPackagedCli(["tidy", samplePath, "--base-dir", localStore, "--out", localOut], tempDir);
+      expect(tidy.status, tidy.stderr).toBe(0);
+      const localRunId = tidy.stdout.match(/Run ([\w-]+) -> completed/)?.[1];
+      expect(localRunId).toBeTruthy();
+      const verify = await runPackagedCli(["verify", localRunId!, "--base-dir", localStore], tempDir);
+      expect(verify.status, verify.stderr).toBe(0);
+      const report = await runPackagedCli(["report", localRunId!, "--base-dir", localStore, "--out", path.join(tempDir, "reports")], tempDir);
+      expect(report.status, report.stderr).toBe(0);
+      const csv = await readFile(path.join(localOut, "tidy.sample-sheet-v1.data.csv"), "utf8");
+      expect(csv).toContain('ALPHA_1,ACGT,"quoted, metadata"');
+      const collision = await runPackagedCli(["tidy", samplePath, "--base-dir", localStore, "--out", localOut], tempDir);
+      expect(collision.status).toBe(1);
+      expect(collision.stderr).toContain("Refusing to overwrite export");
+      expect(await readFile(path.join(localOut, "tidy.sample-sheet-v1.data.csv"), "utf8")).toBe(csv);
+      await writeFile(samplePath, "Sample_ID,Index\nalpha,ACGT,extra\n");
+      const rejected = await runPackagedCli(["tidy", samplePath, "--base-dir", localStore], tempDir);
+      expect(rejected.status).toBe(1);
+      expect(rejected.stderr).toContain("Expected at most 2 fields");
 
       const mockHosted = await createMockHostedSelfServeServer();
       try {
