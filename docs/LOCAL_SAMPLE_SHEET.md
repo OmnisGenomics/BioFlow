@@ -18,6 +18,10 @@ npm run pack:cli
 
 The generated package contains compiled CLI/MCP code and required profile assets. Installing the tarball requires access to the configured npm registry for its runtime dependencies; local execution with the built-in profile requires no hosted BioFlow service or credentials.
 
+For Nix on x86_64 Linux, `nix build` produces `result/bin/bioflow` and `result/bin/bioflow-mcp`, with Node and the two runtime dependencies in the store closure. The flake also declares aarch64 Linux outputs; CI evaluates those outputs but executes builds and smoke tests on x86_64 Linux. `nix flake check` runs the native test suite and an installed-command cleanup/verify/report check, including malformed-input rejection. Run `nix run .#bioflow -- --help` to launch the CLI directly.
+
+Public Nix validation and Conventional Commit checks run on hosted GitHub runners for PRs and main. The optional **Publish Nix cache** workflow retains the organization's self-hosted cache publication path, invoked manually; cache availability is not required for validation.
+
 ## Run, verify, and report
 
 Choose a fresh export directory for each invocation:
