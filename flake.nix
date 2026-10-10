@@ -37,6 +37,7 @@
               pkgs.nodejs_22
               pkgs.pnpm
               pkgs.pnpmConfigHook
+              pkgs.makeWrapper
             ];
 
             npm_config_manage_package_manager_versions = "false";
@@ -51,7 +52,15 @@
             installPhase = ''
               runHook preInstall
               mkdir -p "$out/lib/bioflow"
-              cp -R dist package.json pnpm-lock.yaml "$out/lib/bioflow/"
+              cp -R dist package.json pnpm-lock.yaml README.md LICENSE docs "$out/lib/bioflow/"
+              mkdir -p "$out/lib/bioflow/node_modules" "$out/bin"
+              # Copy the two pinned runtime packages, not build-time dependencies or
+              # pnpm symlinks pointing into the temporary build directory.
+              cp -RL node_modules/yaml node_modules/zod "$out/lib/bioflow/node_modules/"
+              makeWrapper ${pkgs.nodejs_22}/bin/node "$out/bin/bioflow" \
+                --add-flags "$out/lib/bioflow/dist/cli/main.js"
+              makeWrapper ${pkgs.nodejs_22}/bin/node "$out/bin/bioflow-mcp" \
+                --add-flags "$out/lib/bioflow/dist/mcp/main.js"
               runHook postInstall
             '';
 
@@ -113,6 +122,33 @@
         {
           default = self.checks.${system}.ci;
           package = self.packages.${system}.bioflow;
+          installed-cli = pkgs.runCommand "bioflow-installed-cli-${version}" {
+            nativeBuildInputs = [ self.packages.${system}.bioflow pkgs.nodejs_22 ];
+          } ''
+            export HOME="$TMPDIR/home"
+            mkdir -p "$HOME"
+            cd "$TMPDIR"
+            printf 'Sample_ID,Index,Note\nalpha-1,acgt,"quoted, metadata"\n' > sample.csv
+            bioflow --help | grep -F 'Usage:'
+            bioflow tidy sample.csv --base-dir ./evidence --run-id nix-installed-smoke --out ./cleaned
+            bioflow verify nix-installed-smoke --base-dir ./evidence
+            bioflow report nix-installed-smoke --base-dir ./evidence --out ./reports
+            grep -F 'ALPHA_1,ACGT,"quoted, metadata"' cleaned/tidy.sample-sheet-v1.data.csv
+            printf 'Sample_ID,Index\nalpha,ACGT,extra\n' > malformed.csv
+            status=0
+            bioflow tidy malformed.csv --base-dir ./evidence --out ./rejected || status=$?
+            test "$status" -eq 1
+            test ! -e rejected
+            # Launch the actual installed MCP wrapper without the source checkout.
+            export BIOFLOW_MCP_REPO_ROOT="$TMPDIR/mcp-workspace"
+            mkdir -p "$BIOFLOW_MCP_REPO_ROOT/docs/wiki"
+            cp ${self.packages.${system}.bioflow}/lib/bioflow/package.json "$BIOFLOW_MCP_REPO_ROOT/"
+            printf '# Smoke workspace\n' > "$BIOFLOW_MCP_REPO_ROOT/docs/wiki/index.md"
+            node -e 'const fs = require("fs"); const {spawnSync} = require("child_process"); const body = JSON.stringify({jsonrpc:"2.0",id:1,method:"initialize",params:{protocolVersion:"2025-11-25",capabilities:{},clientInfo:{name:"nix-smoke",version:"1"}}}); const input = "Content-Length: " + Buffer.byteLength(body) + "\r\n\r\n" + body; const child = spawnSync("bioflow-mcp", [], {input, encoding:"utf8", timeout:10000}); if (child.status !== 0) throw new Error(child.stderr || "MCP process failed"); fs.writeFileSync("mcp-response.json", child.stdout); const response = JSON.parse(child.stdout.slice(child.stdout.indexOf("\r\n\r\n") + 4)); if (response.id !== 1 || response.result?.protocolVersion !== "2025-11-25") throw new Error("MCP initialize failed");'
+            mkdir -p "$out"
+            cp mcp-response.json "$out/"
+            touch "$out/installed-cli"
+          '';
           golden-node20 = mkCheck {
             name = "golden-node20";
             nodejs = node20Pkgs.nodejs_20;
