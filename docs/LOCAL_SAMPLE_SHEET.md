@@ -12,7 +12,7 @@ Build and validate a checkout before packaging:
 corepack pnpm install --frozen-lockfile --ignore-scripts
 npm run build
 npm run check:ci
-npm run demo:killer:ci
+npm run demo:workflow:ci
 npm run pack:cli
 ```
 

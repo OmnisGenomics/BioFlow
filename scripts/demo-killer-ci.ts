@@ -33,7 +33,7 @@ async function main(): Promise<void> {
     throw withCapturedOutput(output, `report path does not exist: ${reportPath}`);
   }
 
-  console.log("OK: demo:killer smoke assertions passed");
+  console.log("OK: workflow demo checks passed");
 }
 
 async function runDemoKiller(): Promise<string> {

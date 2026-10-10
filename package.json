@@ -1,5 +1,6 @@
 {
   "name": "@bioflow/cli",
+  "description": "Sample-sheet cleanup, local workflow execution, and run verification.",
   "version": "0.0.2",
   "private": false,
   "license": "Apache-2.0",
@@ -46,6 +47,8 @@
     "verify:golden": "tsx scripts/verify-golden.ts",
     "demo:killer": "tsx scripts/demo-killer.ts",
     "demo:killer:ci": "tsx scripts/demo-killer-ci.ts",
+    "demo:workflow": "tsx scripts/demo-killer.ts",
+    "demo:workflow:ci": "tsx scripts/demo-killer-ci.ts",
     "demo:sample-sheet:local": "tsx scripts/demo-sample-sheet-beta.ts --mode local",
     "demo:verify": "tsx scripts/demo-verify.ts",
     "demo:tidy": "tsx scripts/demo-tidy.ts",

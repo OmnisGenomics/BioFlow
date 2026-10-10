@@ -1,4 +1,4 @@
-# Workflow spec (MVP)
+# Workflow specification
 
 Workflows are defined as YAML/JSON documents validated by `src/core/schema.ts`.
 
@@ -33,5 +33,5 @@ Connectors return artifacts, cost, and optional notes.
 ## Example
 
 See `examples/example.workflow.yaml`.
-For a full deterministic evidence flow (clean + score + aggregate + simulated writeback), see `examples/killer.workflow.yaml` with input `examples/synthetic/sample-sheet.messy.csv`.
-Method details and expected artifacts are documented in `docs/KILLER_EXAMPLE.md`.
+For cleanup, simulated scoring, aggregation, and simulated writeback, see `examples/killer.workflow.yaml` with input `examples/synthetic/sample-sheet.messy.csv`.
+The steps and expected files are documented in [SAMPLE_SHEET_EXAMPLE.md](SAMPLE_SHEET_EXAMPLE.md).

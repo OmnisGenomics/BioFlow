@@ -8,6 +8,8 @@
 
 ## Engineering rules
 
+- Use plain, specific language in documentation. Describe implemented behavior; avoid labels such as "workflow OS", "connector mesh", or "killer example", and do not present planned features as existing capabilities.
+
 - Determinism by default:
   - Use seeded computation.
   - Use canonical JSON for hash-relevant payloads.

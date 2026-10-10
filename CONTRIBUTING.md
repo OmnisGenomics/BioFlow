@@ -4,7 +4,7 @@ BioFlow core is Apache 2.0. We welcome pull requests under the repository's Apac
 
 ## Before You Open A PR
 
-- Keep changes aligned with the public-core boundary in `docs/OPEN_CORE.md`.
+- Keep changes aligned with the repository scope in `docs/OPEN_CORE.md`.
 - Run the checks that match the scope of your change.
 - Keep commits small and reviewable.
 - Avoid adding hosted-only behavior to the public repo.
@@ -14,4 +14,4 @@ BioFlow core is Apache 2.0. We welcome pull requests under the repository's Apac
 - Deterministic behavior
 - Tests and docs accuracy
 - Security and privacy
-- Fit with the open-core boundary
+- Fit with the repository's scope
