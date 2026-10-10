@@ -46,6 +46,38 @@ export interface CleanSampleSheetResult {
 }
 
 export function cleanSampleSheetText(input: string, profile: SampleSheetProfile): CleanSampleSheetResult {
+  return processSampleSheetText(input, profile).cleaned;
+}
+
+export function reviewSampleSheetText(input: string, profile: SampleSheetProfile): {
+  cleaned: CleanSampleSheetResult;
+  inputColumns: string[];
+  changes: Array<{ row: number; column: string; before: string | null; after: string | null }>;
+} {
+  const { cleaned, parsed, rows } = processSampleSheetText(input, profile);
+  const changes: Array<{ row: number; column: string; before: string | null; after: string | null }> = [];
+  const columns = [...new Set([...parsed.header, ...cleaned.outputColumns])];
+  const inputIndexes = new Map(parsed.header.map((column, index) => [column, index]));
+  const outputColumns = new Set(cleaned.outputColumns);
+  rows.forEach((row, index) => {
+    for (const column of columns) {
+      const inputIndex = inputIndexes.get(column);
+      const before = inputIndex === undefined ? null : parsed.rawDataRows[index]![inputIndex] ?? "";
+      const after = outputColumns.has(column) ? row[column] ?? "" : null;
+      // Empty added/removed cells are represented by the header change.
+      if (before !== after && !(before === null && after === "") && !(before === "" && after === null)) {
+        changes.push({ row: index + 1, column, before, after });
+      }
+    }
+  });
+  return { cleaned, inputColumns: parsed.rawHeader, changes };
+}
+
+function processSampleSheetText(input: string, profile: SampleSheetProfile): {
+  cleaned: CleanSampleSheetResult;
+  parsed: ParsedSampleSheet;
+  rows: Record<string, string>[];
+} {
   if (Buffer.byteLength(input, "utf8") > MAX_SAMPLE_SHEET_BYTES) {
     throw new Error("Sample sheet exceeds the 10 MiB input limit");
   }
@@ -71,14 +103,14 @@ export function cleanSampleSheetText(input: string, profile: SampleSheetProfile)
         })
       : cleanedDataCsv;
 
-  return {
+  return { parsed, rows, cleaned: {
     kind: parsed.kind,
     cleanedText,
     cleanedDataCsv,
     outputColumns,
     idMappings,
     warnings
-  };
+  } };
 }
 
 function normalizeText(input: string): string {
@@ -94,11 +126,15 @@ type ParsedSampleSheet =
       suffixLines: string[];
       header: string[];
       dataRows: Record<string, string>[];
+      rawHeader: string[];
+      rawDataRows: string[][];
     }
   | {
       kind: "simple";
       header: string[];
       dataRows: Record<string, string>[];
+      rawHeader: string[];
+      rawDataRows: string[][];
     };
 
 function parseSampleSheet(text: string): ParsedSampleSheet {
@@ -116,7 +152,7 @@ function parseSampleSheet(text: string): ParsedSampleSheet {
 
     const delimiter = detectDelimiter(tableLines[0]!);
     const table = parseDelimited(tableLines.join("\n") + "\n", delimiter);
-    const { header, dataRows } = tableToRecords(table);
+    const records = tableToRecords(table);
     const suffixLines = lines.slice(endIdx).filter((l) => l !== undefined);
     let suffixInQuotes = false;
     for (const line of suffixLines) {
@@ -126,14 +162,13 @@ function parseSampleSheet(text: string): ParsedSampleSheet {
       suffixInQuotes = quoteStateAfter(line, suffixInQuotes);
     }
 
-    return { kind: "illumina", preludeLines, suffixLines, header, dataRows };
+    return { kind: "illumina", preludeLines, suffixLines, ...records };
   }
 
   // Simple delimited file with a header row.
   const delimiter = detectDelimiter(lines[0] ?? "");
   const table = parseDelimited(text + (text.endsWith("\n") ? "" : "\n"), delimiter);
-  const { header, dataRows } = tableToRecords(table);
-  return { kind: "simple", header, dataRows };
+  return { kind: "simple", ...tableToRecords(table) };
 }
 
 function findDataTableBounds(
@@ -270,7 +305,7 @@ function parseDelimited(text: string, delimiter: "," | "\t"): string[][] {
   return rows;
 }
 
-function tableToRecords(table: string[][]): { header: string[]; dataRows: Record<string, string>[] } {
+function tableToRecords(table: string[][]): { header: string[]; dataRows: Record<string, string>[]; rawHeader: string[]; rawDataRows: string[][] } {
   const rawHeader = table[0] ?? [];
   if (rawHeader.length === 0) throw new Error("Missing header row");
 
@@ -281,6 +316,7 @@ function tableToRecords(table: string[][]): { header: string[]; dataRows: Record
   }
 
   const dataRows: Record<string, string>[] = [];
+  const rawDataRows: string[][] = [];
   for (let r = 1; r < table.length; r++) {
     const row = table[r]!;
     const allEmpty = row.every((c) => String(c ?? "").trim().length === 0);
@@ -294,9 +330,10 @@ function tableToRecords(table: string[][]): { header: string[]; dataRows: Record
       obj[key] = String(row[c] ?? "").trim();
     }
     dataRows.push(obj);
+    rawDataRows.push(row);
   }
 
-  return { header, dataRows };
+  return { header, dataRows, rawHeader, rawDataRows };
 }
 
 function canonicalizeColumnName(name: string): string {

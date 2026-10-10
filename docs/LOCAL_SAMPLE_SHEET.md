@@ -24,6 +24,26 @@ Public Nix validation and Conventional Commit checks run on hosted GitHub runner
 
 ## Run, verify, and report
 
+### Review before cleanup
+
+```bash
+bioflow validate-sample-sheet ./SampleSheet.csv --json
+bioflow preview-sample-sheet ./SampleSheet.csv --json
+bioflow tidy ./SampleSheet.csv --accept-preview <previewSha256> --base-dir ./evidence --out ./cleaned/run-001
+```
+
+Validation and preview do not create runs, configuration, exports, or audit records, and do not modify the input. They use the local built-in `sample-sheet-v1` profile, with no remote requests. `--profile sample-sheet-v1` may be supplied explicitly; other profiles are not supported by these two commands.
+
+A validation success means the file is accepted by cleanup, not that it is already normalized or compatible with a particular instrument. `needsChanges` reports whether the resulting file bytes would differ. Invalid input reports the first blocking error and returns status 1. Syntax errors return 2. Correctable changes and warnings return 0 with `valid: true`.
+
+The preview includes original and proposed headers, cell changes, warnings, complete proposed text (`cleanedText` in JSON), and input/output/profile hashes. Rows are numbered from 1 in the nonblank data records, matching the cleanup ID map; these are not physical line numbers. Added or removed empty cells are represented by header changes. Formatting changes such as delimiter, BOM removal, quoting, blank records, and line endings can change the file even when the cell-change list is empty. Human output escapes cell values; use `--json` to inspect the complete proposed text and all formatting.
+
+The preview hash binds the exact input bytes, validated profile rules, and complete review including the proposed output. `tidy --accept-preview` recomputes the review before creating a run and rejects a mismatch. It stores the matching input snapshot, so later edits to the source cannot change that accepted run. After an input edit, profile change, or implementation upgrade that changes the review, generate and review a fresh preview. The hash verifies a matching review; it is not a signature or evidence of a particular person's approval.
+
+`tidy` without `--accept-preview` keeps its direct-cleanup behavior. Review commands are new source-checkout capabilities and are not present in the previously published v0.0.2 package.
+
+### Execute and verify
+
 Choose a fresh export directory for each invocation:
 
 ```bash

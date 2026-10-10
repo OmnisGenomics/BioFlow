@@ -75,6 +75,25 @@ npm run bioflow -- report <runId> --format markdown --out ./reports
 
 ## Clean a sample sheet
 
+Check the file and review proposed corrections before writing any output:
+
+```bash
+npm run bioflow -- validate-sample-sheet ./SampleSheet.csv
+npm run bioflow -- preview-sample-sheet ./SampleSheet.csv
+# For the complete proposed file and a machine-readable review:
+npm run bioflow -- preview-sample-sheet ./SampleSheet.csv --json
+```
+
+These commands are read-only and use the built-in `sample-sheet-v1` profile. Validation reports whether cleanup accepts the input and whether it would change it. Preview shows header and cell changes, warnings, and a review hash. Invalid files produce an error instead of partial proposed output.
+
+To accept a reviewed preview, pass its hash to cleanup:
+
+```bash
+npm run bioflow -- tidy ./SampleSheet.csv --accept-preview <previewSha256> --out ./cleaned/run-001
+```
+
+Cleanup refuses the hash if the input, profile, or proposed output has changed. It uses the reviewed input bytes for the accepted run. Running `tidy` without this option retains its existing direct-cleanup behavior.
+
 Normalize sample IDs, indexes, and lane values while retaining other metadata:
 
 ```bash

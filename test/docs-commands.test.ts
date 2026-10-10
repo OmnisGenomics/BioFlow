@@ -24,6 +24,8 @@ const LOCAL_BIOFLOW_SUBCOMMANDS = new Set([
   "autopilot:gate",
   "init",
   "validate",
+  "validate-sample-sheet",
+  "preview-sample-sheet",
   "run",
   "verify",
   "report",
