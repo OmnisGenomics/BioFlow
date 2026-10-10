@@ -1,11 +1,10 @@
+import { bioflowCommand } from "../scripts/lib/process-command.js";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { createMockHostedSelfServeServer } from "./helpers/mock-hosted-self-serve.js";
-
-const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 
 interface CliRunResult {
   status: number | null;
@@ -239,7 +238,7 @@ async function runCli(
   cwd: string
 ): Promise<CliRunResult> {
   return await new Promise<CliRunResult>((resolve, reject) => {
-    const child = spawn(npmCmd, ["run", "-s", "bioflow", "--", ...args], {
+    const child = spawn(...bioflowCommand([...args]), {
       cwd,
       env: {
         ...process.env,

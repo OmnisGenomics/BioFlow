@@ -39,7 +39,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:serial": "vitest run --pool=threads --poolOptions.threads.singleThread=true",
-    "test:packaged-cli": "BIOFLOW_RUN_PACKAGED_CLI_TEST=1 vitest run test/packaged-cli.test.ts",
+    "test:packaged-cli": "tsx scripts/test-packaged-cli.ts",
     "test:watch": "vitest",
     "fixture:golden:generate": "tsx scripts/generate-golden-fixture.ts",
     "verify:golden": "tsx scripts/verify-golden.ts",
