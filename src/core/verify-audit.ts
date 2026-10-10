@@ -1,6 +1,7 @@
 import type { ExecutionRecord } from "./execution-record.js";
 import type { Workflow } from "./types.js";
 import { sha256Json } from "./hash.js";
+import { topologicalOrder } from "./engine.js";
 
 // Check evidence completeness and consistency; an unkeyed hash chain does not
 // authenticate the actor or prevent someone from rewriting all local evidence.
@@ -9,8 +10,12 @@ export function verifyExecutionAudit(record: ExecutionRecord, workflow: Workflow
   const { runId } = execution;
   const errors: string[] = [];
   const nodes = new Map(workflow.nodes.map((node) => [node.id, node]));
+  const order = topologicalOrder(workflow);
   const visited = new Set<string>();
   for (const [index, nodeRun] of nodeRuns.entries()) {
+    if (nodeRun.nodeId !== order[index]) {
+      errors.push(`Node run ${index} does not match the deterministic execution prefix`);
+    }
     const node = nodes.get(nodeRun.nodeId);
     if (!node || node.kind !== nodeRun.kind || visited.has(nodeRun.nodeId)) {
       errors.push(`Node run ${index} does not match a unique workflow node`);
