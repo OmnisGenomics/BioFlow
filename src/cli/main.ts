@@ -13,6 +13,7 @@ import { sha256Json } from "../core/hash.js";
 import { stableStringify } from "../core/stable-json.js";
 import { sampleSheetV1Profile } from "../clean/profiles/sample-sheet-v1.js";
 import { MAX_SAMPLE_SHEET_BYTES } from "../clean/sample-sheet.js";
+import { previewSampleSheet, readSampleSheetBytes, validateSampleSheet } from "../clean/review.js";
 import { loadCliConfig, resolveRemoteDefaults, saveCliConfig } from "./config.js";
 import { runBioFlowMcp } from "../mcp/main.js";
 import type { Workflow } from "../core/types.js";
@@ -135,6 +136,7 @@ type Command =
     }
   | { kind: "init"; outPath: string }
   | { kind: "validate"; workflowPath: string }
+  | { kind: "sample-sheet-review"; mode: "validate" | "preview"; inputPath: string; json: boolean }
   | { kind: "run"; workflowPath: string; inputs: string[] }
   | { kind: "verify"; runId: string; baseDir: string }
   | {
@@ -152,6 +154,7 @@ type Command =
       outDir?: string | undefined;
       profileName: string;
       runId?: string | undefined;
+      acceptPreview?: string | undefined;
       remote?: RemoteConfig | undefined;
     }
   | {
@@ -356,6 +359,46 @@ async function main(): Promise<void> {
       if (res.outputPath) console.log(`Wrote: ${res.outputPath}`);
       return;
     }
+    case "sample-sheet-review": {
+      try {
+        const bytes = await readSampleSheetBytes(path.resolve(cmd.inputPath));
+        if (cmd.mode === "validate") {
+          const validation = validateSampleSheet(bytes, sampleSheetV1Profile);
+          if (cmd.json) printJson(validation);
+          else {
+            console.log(`Valid sample sheet: ${validation.rowCount} data row(s)`);
+            console.log(validation.needsChanges ? "Cleanup would change this file." : "Cleanup would leave this file unchanged.");
+            for (const warning of validation.warnings) console.log(`Warning: ${JSON.stringify(warning)}`);
+          }
+          return;
+        }
+        const preview = previewSampleSheet(bytes, sampleSheetV1Profile);
+        if (cmd.json) {
+          printJson(preview);
+        } else {
+          console.log(`Valid sample sheet: ${preview.rowCount} data row(s)`);
+          console.log(preview.needsChanges ? "Cleanup would change this file." : "Cleanup would leave this file unchanged.");
+          for (const warning of preview.warnings) console.log(`Warning: ${JSON.stringify(warning)}`);
+          if (cmd.mode === "preview") {
+            console.log(`Columns before: ${JSON.stringify(preview.columns.before)}`);
+            console.log(`Columns after:  ${JSON.stringify(preview.columns.after)}`);
+            for (const change of preview.changes) {
+              console.log(`Row ${change.row}, ${JSON.stringify(change.column)}: ${JSON.stringify(change.before)} -> ${JSON.stringify(change.after)}`);
+            }
+            if (preview.changesTruncated) console.log(`Showing ${preview.changes.length} of ${preview.changeCount} cell changes. Before accepting, inspect the complete proposed file using --json (cleanedText).`);
+            if (preview.needsChanges) console.log("Output uses comma-separated UTF-8 without a BOM and CRLF record endings; blank records and quoting may be normalized. Use --json to inspect the complete proposed file.");
+            console.log(`Preview SHA-256: ${preview.previewSha256}`);
+            console.log(`To accept this review, run tidy on the same file with --accept-preview ${preview.previewSha256} and a fresh --out directory.`);
+          }
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (cmd.json) printJson({ schemaVersion: cmd.mode === "preview" ? "sample-sheet-preview.v1" : "sample-sheet-validation.v1", valid: false, errors: [message] });
+        else console.error(`Invalid sample sheet: ${message}`);
+        process.exitCode = 1;
+      }
+      return;
+    }
     case "tidy": {
       const baseDir = cmd.baseDir;
       const store = new LocalArtifactStore(baseDir);
@@ -372,8 +415,18 @@ async function main(): Promise<void> {
       if (["__workflow.json", "gxp-report.md", "tidy.sample-sheet-v1.clean.csv", "tidy.sample-sheet-v1.data.csv", "tidy.sample-sheet-v1.idmap.json", "tidy.sample-sheet-v1.report.json"].includes(path.basename(inputPath))) {
         throw new Error("Input filename is reserved for run evidence; rename the input file before cleanup");
       }
+      let approvedBytes: Buffer | undefined;
+      if (cmd.acceptPreview) {
+        approvedBytes = await readSampleSheetBytes(inputPath);
+        const preview = previewSampleSheet(approvedBytes, profile);
+        if (preview.previewSha256 !== cmd.acceptPreview) {
+          throw new Error("Preview no longer matches this input, profile, or proposed output; generate and review a new preview before accepting");
+        }
+      }
       await claimTidyRun(baseDir, runId);
-      const input = await store.importFile(runId, inputPath);
+      const input = approvedBytes
+        ? await store.putBytes({ runId, name: path.basename(inputPath), bytes: approvedBytes, mediaType: path.extname(inputPath).toLowerCase() === ".csv" ? "text/csv" : "application/octet-stream", kind: "input" })
+        : await store.importFile(runId, inputPath);
       const workflow = makeTidyWorkflow({ profile });
       const { execution, executionPath } = await runWorkflow({
         workflow,
@@ -663,6 +716,18 @@ function parseArgs(argv: string[]): Command | null {
     return { kind: "report", runId, ...opts };
   }
 
+  if (sub === "validate-sample-sheet" || sub === "preview-sample-sheet") {
+    const inputPath = rest[0];
+    if (!inputPath || inputPath.startsWith("--")) return null;
+    let json = false;
+    for (let i = 1; i < rest.length; i++) {
+      if (rest[i] === "--json") { json = true; continue; }
+      if (rest[i] === "--profile" && rest[i + 1] === "sample-sheet-v1") { i++; continue; }
+      return null;
+    }
+    return { kind: "sample-sheet-review", mode: sub === "validate-sample-sheet" ? "validate" : "preview", inputPath, json };
+  }
+
   if (sub === "tidy") {
     const inputPath = rest[0];
     if (!inputPath) return null;
@@ -675,6 +740,7 @@ function parseArgs(argv: string[]): Command | null {
       outDir: opts.outDir,
       profileName: opts.profileName,
       runId: opts.runId,
+      acceptPreview: opts.acceptPreview,
       remote: opts.remote
     };
   }
@@ -807,10 +873,12 @@ Usage:
   bioflow autopilot:gate [file] [--max-duration-ms <n>] [--min-progress-completed <n>] [--min-progress-ratio <0..1>] [--require-persisted-auth <true|false>] [--required-checklist-ids a,b,c] [--json]
   bioflow init <out.yaml>
   bioflow validate <workflow.yaml|json>
+  bioflow validate-sample-sheet <file> [--profile sample-sheet-v1] [--json]
+  bioflow preview-sample-sheet <file> [--profile sample-sheet-v1] [--json]
   bioflow run <workflow.yaml|json> --input <path> [--input <path> ...]
   bioflow verify <runId> [--base-dir <dir>]
   bioflow report <runId> [--format markdown] [--out <dir>] [--base-dir <dir>] [--no-replay]
-  bioflow tidy <file> [--profile <name>] [--out <dir>] [--run-id <uuid>] [--remote-url <url>] [--org-id <uuid>] [--token <token>]
+  bioflow tidy <file> [--profile <name>] [--out <dir>] [--run-id <uuid>] [--accept-preview <sha256>] [--remote-url <url>] [--org-id <uuid>] [--token <token>]
   bioflow push <runId> [--remote-url <url>] [--org-id <uuid>] [--token <token>] [--dry-run] [--profile-id <id>] [--tags a,b] [--visibility <v>]
   bioflow pull <runId> [--remote-url <url>] [--org-id <uuid>] [--token <token>] [--force]
   bioflow ls-remote [--remote-url <url>] [--org-id <uuid>] [--token <token>] [--limit <n>] [--cursor <c>] [--profile-id <id>] [--tags a,b] [--visibility <v>]
@@ -2276,6 +2344,7 @@ function parseTidyOpts(argv: string[]): {
   outDir?: string | undefined;
   profileName: string;
   runId?: string | undefined;
+  acceptPreview?: string | undefined;
   remote?: RemoteConfig | undefined;
 } | null {
   const remoteDefaults = resolveRemoteDefaults();
@@ -2288,12 +2357,20 @@ function parseTidyOpts(argv: string[]): {
   let outDir: string | undefined;
   let profileName = "sample-sheet-v1";
   let runId: string | undefined;
+  let acceptPreview: string | undefined;
   let remoteUrl = remoteUrlDefault;
   let token = tokenDefault;
   let orgId = orgIdDefault;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
+    if (arg === "--accept-preview") {
+      const value = argv[i + 1];
+      if (!value || !/^[a-f0-9]{64}$/.test(value)) return null;
+      acceptPreview = value;
+      i++;
+      continue;
+    }
     if (arg === "--base-dir") {
       const v = argv[i + 1];
       if (!v) return null;
@@ -2351,6 +2428,7 @@ function parseTidyOpts(argv: string[]): {
     outDir: outDir ? path.resolve(outDir) : undefined,
     profileName,
     runId,
+    acceptPreview,
     remote: token || orgId ? { url: remoteUrl, token, orgId } : undefined
   };
 }

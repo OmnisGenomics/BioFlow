@@ -130,7 +130,12 @@
             cd "$TMPDIR"
             printf 'Sample_ID,Index,Note\nalpha-1,acgt,"quoted, metadata"\n' > sample.csv
             bioflow --help | grep -F 'Usage:'
-            bioflow tidy sample.csv --base-dir ./evidence --run-id nix-installed-smoke --out ./cleaned
+            bioflow validate-sample-sheet sample.csv --json > validation.json
+            bioflow preview-sample-sheet sample.csv --json > preview.json
+            test ! -e .bioflow
+            preview_hash="$(node -e 'process.stdout.write(require("./preview.json").previewSha256)')"
+            bioflow tidy sample.csv --accept-preview "$preview_hash" --base-dir ./evidence --run-id nix-installed-smoke --out ./cleaned
+            node -e 'const fs = require("fs"); const expected = require("./preview.json").cleanedText; if (fs.readFileSync("cleaned/tidy.sample-sheet-v1.clean.csv", "utf8") !== expected) throw new Error("Accepted output differs from preview");'
             bioflow verify nix-installed-smoke --base-dir ./evidence
             bioflow report nix-installed-smoke --base-dir ./evidence --out ./reports
             grep -F 'ALPHA_1,ACGT,"quoted, metadata"' cleaned/tidy.sample-sheet-v1.data.csv
