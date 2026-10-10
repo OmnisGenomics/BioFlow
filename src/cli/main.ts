@@ -378,6 +378,14 @@ async function main(): Promise<void> {
       console.log(`Execution record: ${executionPath ?? "(not written)"}`);
       console.log(`Outputs: ${execution.outputs.map((a) => a.uri).join(", ") || "(none)"}`);
 
+      if (execution.status !== "completed") {
+        for (const entry of execution.auditLog.filter((entry) => entry.action === "node_failed")) {
+          console.error(`Tidy failed: ${String(entry.details.error)}`);
+        }
+        process.exitCode = 1;
+        return;
+      }
+
       if (cmd.outDir) {
         await exportArtifacts({
           baseDir,

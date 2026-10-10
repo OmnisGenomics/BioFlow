@@ -199,6 +199,8 @@ function parseDelimited(text: string, delimiter: "," | "\t"): string[][] {
     field += ch;
   }
 
+  if (inQuotes) throw new Error("Unterminated quoted field in sample sheet");
+
   // Trim trailing empty rows caused by final newline.
   while (rows.length > 0) {
     const last = rows[rows.length - 1]!;
@@ -225,6 +227,9 @@ function tableToRecords(table: string[][]): { header: string[]; dataRows: Record
     const row = table[r]!;
     const allEmpty = row.every((c) => String(c ?? "").trim().length === 0);
     if (allEmpty) continue;
+    if (row.length > header.length) {
+      throw new Error(`Row ${r}: Expected at most ${header.length} fields, got ${row.length}`);
+    }
     const obj: Record<string, string> = {};
     for (let c = 0; c < header.length; c++) {
       const key = header[c]!;
