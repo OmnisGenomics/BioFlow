@@ -77,6 +77,8 @@ bioflow report <runId> --base-dir ./evidence --format markdown --out ./reports
 
 Invalid encoding and malformed table failures inside the workflow retain verifiable failure evidence with no cleaned outputs. File preflight failures (missing/oversized file, unsafe/reused run ID) can fail before an execution record is created. An interrupted run may leave an incomplete directory: retain it for inspection and retry with a new ID.
 
+Manifest initialization treats only a missing file as a new manifest. Existing malformed or unreadable manifests produce an error and are preserved for inspection; they are not reset to empty evidence. After an export interruption, a completed run can still verify while its exported bundle is partial. Inspect exports separately and retry with a fresh run ID and destination. These recovery checks cover ordinary write errors and controlled process termination, not power-loss durability.
+
 ## Evidence retention and restore
 
 Retain the complete evidence directory: `objects/` plus `runs/<runId>/manifest.json` and `execution.json`. Exported CSVs alone are not sufficient for offline verification. Stop writers before taking a consistent backup; copy the whole evidence directory and record the package version/hash and runtime used.
