@@ -71,8 +71,11 @@ export class RunManifestStore {
   private async tryLoad(runId: string): Promise<RunManifestV1 | null> {
     try {
       return await this.load(runId);
-    } catch {
-      return null;
+    } catch (error) {
+      // Only absence permits initialization. Preserve malformed or unreadable
+      // evidence instead of replacing it with a new empty manifest.
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
     }
   }
 
