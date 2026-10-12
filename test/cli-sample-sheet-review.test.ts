@@ -17,6 +17,31 @@ async function workspace() {
 }
 
 describe("read-only sample-sheet CLI review and acceptance", () => {
+  it("reviews an accepted Illumina export as unchanged, including trailing sections", async () => {
+    const w = await workspace();
+    try {
+      await writeFile(w.input, '[Data]\nSample_ID,Index\nalpha,acgt\n[Settings]\nKey,Value\n\n');
+      const preview = JSON.parse(w.run(["preview-sample-sheet", w.input, "--json"]).stdout);
+      const out = path.join(w.root, "cleaned");
+      const accepted = w.run(["tidy", w.input, "--accept-preview", preview.previewSha256, "--out", out]);
+      expect(accepted.status, accepted.stderr).toBe(0);
+      const exported = path.join(out, "tidy.sample-sheet-v1.clean.csv");
+      const bytes = await readFile(exported);
+      expect(bytes.toString()).toBe(preview.cleanedText);
+      expect(sha256Hex(bytes)).toBe(preview.outputSha256);
+      const reviewed = w.run(["preview-sample-sheet", exported, "--json"]);
+      expect(reviewed.status, reviewed.stderr).toBe(0);
+      const unchanged = JSON.parse(reviewed.stdout);
+      expect(unchanged.needsChanges).toBe(false);
+      expect(unchanged.inputSha256).toBe(preview.outputSha256);
+      expect(unchanged.outputSha256).toBe(preview.outputSha256);
+      const validation = w.run(["validate-sample-sheet", exported, "--json"]);
+      expect(validation.status, validation.stderr).toBe(0);
+      expect(JSON.parse(validation.stdout).needsChanges).toBe(false);
+      expect(await readFile(exported)).toEqual(bytes);
+    } finally { await rm(w.root, {recursive: true, force: true}); }
+  }, 20_000);
+
   it.each(["validate-sample-sheet", "preview-sample-sheet"])("%s leaves input, config and evidence untouched", async command => {
     const w = await workspace();
     try {

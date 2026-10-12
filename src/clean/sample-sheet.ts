@@ -143,6 +143,9 @@ type ParsedSampleSheet =
 
 function parseSampleSheet(text: string): ParsedSampleSheet {
   const lines = text.split("\n");
+  // A final newline terminates the last line; its split sentinel is not an
+  // additional blank suffix line. Keep any preceding intentional blank lines.
+  if (lines[lines.length - 1] === "") lines.pop();
   // A section-looking line within a quoted field is metadata, not a boundary.
   const firstLine = lines.find((line) => line.trim().length > 0) ?? "";
   const sectioned = /^\s*\[[^\]]+\]\s*$/.test(firstLine);
